@@ -1,5 +1,5 @@
 image := env("FAILER_IMAGE", "failer:dev")
-musl  := "x86_64-unknown-linux-musl"
+musl  := "aarch64-unknown-linux-musl"
 
 _default:
     @just --list

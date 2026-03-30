@@ -1,0 +1,3 @@
+[tools]
+colima = "latest"
+k9s = "latest"
