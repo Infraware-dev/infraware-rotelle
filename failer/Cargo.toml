@@ -1,0 +1,12 @@
+[package]
+name = "failer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+poem = "3.1.12"
+tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
