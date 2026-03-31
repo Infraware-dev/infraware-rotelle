@@ -1,7 +1,7 @@
 FROM scratch
 
-COPY failer/target/aarch64-unknown-linux-musl/release/failer /usr/local/bin/failer
+COPY rotelle/target/aarch64-unknown-linux-musl/release/rotelle /usr/local/bin/rotelle
 
 EXPOSE 8080
 
-ENTRYPOINT ["/usr/local/bin/failer"]
+ENTRYPOINT ["/usr/local/bin/rotelle"]

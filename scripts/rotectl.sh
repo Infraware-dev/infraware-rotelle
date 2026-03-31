@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# failctl.sh — send commands to the failer /failctl/cmd endpoint
+# rotectl.sh — send commands to the rotelle /rotectl/cmd endpoint
 #
 # Usage:
-#   ./scripts/failctl.sh [HOST] <case>
+#   ./scripts/rotectl.sh [HOST] <case>
 #
 #   HOST  optional base URL (default: http://localhost:8080)
 #   case  idle | c1
 #
 # Examples:
-#   ./scripts/failctl.sh idle
-#   ./scripts/failctl.sh c1
-#   ./scripts/failctl.sh http://failer.example.com idle
+#   ./scripts/rotectl.sh idle
+#   ./scripts/rotectl.sh c1
+#   ./scripts/rotectl.sh http://rotelle.example.com idle
 #
 # Equivalent curl commands:
-#   curl -s -X POST http://localhost:8080/failctl/cmd \
+#   curl -s -X POST http://localhost:8080/rotectl/cmd \
 #        -H 'Content-Type: application/json' \
 #        -d '{"cmd":"reset"}'
 #
-#   curl -s -X POST http://localhost:8080/failctl/cmd \
+#   curl -s -X POST http://localhost:8080/rotectl/cmd \
 #        -H 'Content-Type: application/json' \
 #        -d '{"cmd":"set","case":"c1"}'
 
@@ -52,8 +52,8 @@ case "$CASE" in
         ;;
 esac
 
-echo "POST $HOST/failctl/cmd  $BODY"
-curl -s -X POST "$HOST/failctl/cmd" \
+echo "POST $HOST/rotectl/cmd  $BODY"
+curl -s -X POST "$HOST/rotectl/cmd" \
      -H 'Content-Type: application/json' \
      -d "$BODY" | cat
 echo

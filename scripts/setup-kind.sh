@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-CLUSTER_NAME="${KIND_CLUSTER_NAME:-failer-test}"
+CLUSTER_NAME="${KIND_CLUSTER_NAME:-rotelle-test}"
 KIND_VERSION="v0.27.0"
 KUBECTL_MIN_VERSION="1.29"
 
@@ -83,7 +83,7 @@ main() {
 
     echo ""
     info "Setup complete. Cluster '$CLUSTER_NAME' is ready."
-    info "To load the failer image: ./scripts/load-failer.sh"
+    info "To load the rotelle image: ./scripts/load-rotelle.sh"
     info "To delete the cluster:    kind delete cluster --name $CLUSTER_NAME"
 }
 

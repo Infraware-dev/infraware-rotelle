@@ -20,7 +20,7 @@ async fn main() -> Result<(), std::io::Error> {
     let state_file = format!("{data_dir}/state.json");
     let initial = load_state(&state_file);
 
-    info!(data_dir, failure_case = initial, "failer starting");
+    info!(data_dir, failure_case = initial, "rotelle starting");
 
     let state = State {
         failure_case: Arc::new(Mutex::new(initial)),

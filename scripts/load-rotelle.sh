@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-IMAGE_NAME="${FAILER_IMAGE:-failer:dev}"
+IMAGE_NAME="${ROTELLE_IMAGE:-rotelle:dev}"
 MUSL_TARGET="x86_64-unknown-linux-musl"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -31,8 +31,8 @@ ensure_musl_target() {
 }
 
 build_binary() {
-    info "Building failer binary (target: $MUSL_TARGET)..."
-    (cd "$REPO_ROOT/failer" && cargo build --release --target "$MUSL_TARGET")
+    info "Building rotelle binary (target: $MUSL_TARGET)..."
+    (cd "$REPO_ROOT/rotelle" && cargo build --release --target "$MUSL_TARGET")
 }
 
 build_image() {
@@ -82,17 +82,17 @@ load_image() {
 }
 
 deploy() {
-    local manifest="$REPO_ROOT/k8s/failer.yaml"
+    local manifest="$REPO_ROOT/k8s/rotelle.yaml"
     info "Applying manifests..."
     kubectl apply -f "$manifest"
 
-    info "Waiting for failer deployment to roll out..."
-    kubectl rollout status deployment/failer -n failer --timeout=60s
+    info "Waiting for rotelle deployment to roll out..."
+    kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
 }
 
 main() {
     echo "================================================"
-    echo " Build and deploy failer"
+    echo " Build and deploy rotelle"
     echo "================================================"
 
     check_prerequisites
@@ -103,8 +103,8 @@ main() {
     deploy
 
     echo ""
-    info "Done. failer deployed to namespace 'failer'."
-    info "  kubectl port-forward -n failer svc/failer 8080:8080"
+    info "Done. rotelle deployed to namespace 'rotelle'."
+    info "  kubectl port-forward -n rotelle svc/rotelle 8080:8080"
 }
 
 main "$@"
