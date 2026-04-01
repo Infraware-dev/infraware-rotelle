@@ -28,6 +28,13 @@ pub fn cmd(
             info!(failure_case = "none, idle", "failure case reset");
             (StatusCode::OK, Json(serde_json::json!({ "ok": true, "failure_case": "none, idle" })))
         }
+        "check" => {
+            let case = "check".to_string();
+            *state.failure_case.lock().unwrap() = case.clone();
+            persist_state(&state.state_file, &case);
+            info!(failure_case = case, "failure case set");
+            (StatusCode::OK, Json(serde_json::json!({ "ok": true, "failure_case": case })))
+        }
         unknown => (
             StatusCode::BAD_REQUEST,
             Json(serde_json::json!({ "ok": false, "error": format!("unknown cmd: {unknown}") })),

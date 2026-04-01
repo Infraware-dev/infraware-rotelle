@@ -1,6 +1,7 @@
 set dotenv-load
 
 image := env("ROTELLE_IMAGE", "rotelle:dev")
+rotelle_service_host := env("ROTELLE_SERVICE_HOST", "http://127.0.0.1:8080")
 arch  := env("ROTELLE_MUSL_ARCH", `uname -m | sed 's/arm64/aarch64/'`)
 musl  := arch + "-unknown-linux-musl"
 
@@ -10,6 +11,15 @@ _default:
 # Apply k8s manifests and wait for rollout
 deploy:
     kubectl apply -f k8s/rotelle.yaml
+    kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
+
+# Delete using the k8s manifest (for a clean start)
+undeploy:
+    kubectl delete -f k8s/rotelle.yaml
+
+# Restart pods to pick up a newly loaded image (imagePullPolicy: Never)
+restart:
+    kubectl rollout restart deployment/rotelle -n rotelle
     kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
 
 # Build the rotelle binary (musl) and Docker image
@@ -29,6 +39,13 @@ config:
 run:
     mkdir -p tmp/data
     DATA_DIR=./tmp/data cargo run --manifest-path rotelle/Cargo.toml
+
+# Run hurl control-path test sequence against the rotelle service
+test-hurl:
+    hurl \
+      --test \
+      --variable rotelle_service_host={{rotelle_service_host}} \
+      tests/hurl/c0-c1-check.hurl
 
 # Full pipeline: build binary, build image, load into cluster, deploy
 ship:

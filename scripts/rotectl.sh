@@ -5,7 +5,7 @@
 #   ./scripts/rotectl.sh [HOST] <case>
 #
 #   HOST  optional base URL (default: http://localhost:8080)
-#   case  idle | c1
+#   case  idle | c1 | check
 #
 # Examples:
 #   ./scripts/rotectl.sh idle
@@ -40,14 +40,17 @@ case "$CASE" in
     c1)
         BODY='{"cmd":"set","case":"c1"}'
         ;;
+    check)
+        BODY='{"cmd":"check"}'
+        ;;
     "")
         echo "Usage: $(basename "$0") [HOST] <case>" >&2
-        echo "Cases: idle | c1" >&2
+        echo "Cases: idle | c1 | check" >&2
         exit 1
         ;;
     *)
         echo "Unknown case: $CASE" >&2
-        echo "Cases: idle | c1" >&2
+        echo "Cases: idle | c1 | check" >&2
         exit 1
         ;;
 esac
