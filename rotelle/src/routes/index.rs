@@ -7,9 +7,9 @@ pub fn index(state: Data<&State>) -> Html<String> {
     Html(format!(
         r#"<!DOCTYPE html>
 <html>
-<head><title>Failer</title></head>
+<head><title>Rotelle</title></head>
 <body>
-<h1>Failer</h1>
+<h1>Rotelle</h1>
 <p>Current failure case: <strong>{case}</strong></p>
 </body>
 </html>"#

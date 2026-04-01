@@ -71,4 +71,4 @@ spec:
     - name: http
       port: 8080
       targetPort: http
-  type: ClusterIP
+  type: LoadBalancer

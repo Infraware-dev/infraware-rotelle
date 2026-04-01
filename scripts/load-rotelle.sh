@@ -2,7 +2,9 @@
 set -euo pipefail
 
 IMAGE_NAME="${ROTELLE_IMAGE:-rotelle:dev}"
-MUSL_TARGET="x86_64-unknown-linux-musl"
+_detected_arch="$(uname -m | sed 's/arm64/aarch64/')"
+MUSL_ARCH="${ROTELLE_MUSL_ARCH:-$_detected_arch}"
+MUSL_TARGET="${MUSL_ARCH}-unknown-linux-musl"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 GREEN='\033[0;32m'
