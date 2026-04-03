@@ -9,7 +9,7 @@ _default:
     @just --list
 
 # Apply k8s manifests and wait for rollout
-deploy:
+deploy: docker-build
     kubectl apply -f k8s/rotelle.yaml
     kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
 

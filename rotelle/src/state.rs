@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 use tokio::task::AbortHandle;
+use tracing::info;
 
 #[derive(Clone)]
 pub struct State {
@@ -26,11 +27,16 @@ impl State {
 }
 
 pub fn load_state(path: &str) -> String {
-    std::fs::read_to_string(path)
+    let loaded = std::fs::read_to_string(path)
         .ok()
         .and_then(|s| serde_json::from_str::<serde_json::Value>(&s).ok())
-        .and_then(|v| v["failure_case"].as_str().map(String::from))
-        .unwrap_or_else(|| "none, idle".to_string())
+        .and_then(|v| v["failure_case"].as_str().map(String::from));
+
+    if let Some(ref case) = loaded {
+        info!(path, failure_case = case, "failure case loaded from data");
+    }
+
+    loaded.unwrap_or_else(|| "none, idle".to_string())
 }
 
 pub fn persist_state(path: &str, case: &str) {

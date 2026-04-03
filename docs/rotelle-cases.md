@@ -29,6 +29,6 @@ Diagnosis:
 - propose key fix
 
 ## Proposed
-5. Pod deployment failure in k8s config (missing config env)
-6. k8s public accessibility via k8s service (no external access path)
-7. k8s public accessibility via k8s service (overspecified loadbalancer and ingress controller both)
+- Pod deployment failure in k8s config (missing config env)
+- k8s public accessibility via k8s service (no external access path)
+- k8s public accessibility via k8s service (overspecified loadbalancer and ingress controller both)
