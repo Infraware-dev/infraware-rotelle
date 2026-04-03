@@ -39,6 +39,11 @@ spec:
               port: http
             initialDelaySeconds: 3
             periodSeconds: 5
+          resources:
+            requests:
+              memory: "32Mi"
+            limits:
+              memory: "64Mi"
           volumeMounts:
             - name: state
               mountPath: /data

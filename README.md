@@ -73,10 +73,7 @@ access and control the rotelle interface
 
 # Failure cases
 
-TBD
-- excess memory:   rotelle can be commanded to allocate excess memory
-- responsiveness failure: intermittent health or functional endpoing failure
-- load failure: config time load missing parameters (this may be more load configs than the rotelle binary itself at runtime)
+see `docs/rotelle-cases.md`
 
 
 

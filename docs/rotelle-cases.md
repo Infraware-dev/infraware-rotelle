@@ -1,15 +1,34 @@
 # Rotelle Cases
 
 
-## Cases
+# Case status
 
-1. c0 none
-2. c1 check
-3. Pod deployment failure in k8s config (missing config env)
-4. k8s pod intermittent service failure (identify pod?)
-   k8s pod exceeds memory allocation
-   - identify root cause in ops env (the pod)
-   - propose workaround
-   - propose key fix
-5. k8s public accessible via k8s service (no external access path)
-6. k8s public accessible via k8s service (overspecified loadbalancer and ingress controller both)
+## Implemented
+### c0 idle
+
+### c1 check: control response check mode
+
+### c2 intermittent-01: k8s pod intermittent service failure
+After N index accesses, application exits "crashes"
+
+Input params:
+- N acesses
+Diagnoses:
+- Failing service -> pod or pod -> service identified
+
+### c3 intermittent-02: k8s pod intermittent service failure
+k8s pod exceeds memory allocation over time
+
+Input params:
+- allocation loop time
+- allocation loop amount
+
+Diagnosis:
+- identify root cause in ops env (the pod)
+- propose workaround
+- propose key fix
+
+## Proposed
+5. Pod deployment failure in k8s config (missing config env)
+6. k8s public accessibility via k8s service (no external access path)
+7. k8s public accessibility via k8s service (overspecified loadbalancer and ingress controller both)

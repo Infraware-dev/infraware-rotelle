@@ -5,7 +5,7 @@
 #   ./scripts/rotectl.sh [HOST] <case>
 #
 #   HOST  optional base URL (default: http://localhost:8080)
-#   case  idle | c1 | check
+#   case  idle | c1 | check | intermittent-01 | intermittent-02
 #
 # Examples:
 #   ./scripts/rotectl.sh idle
@@ -37,20 +37,26 @@ case "$CASE" in
     idle)
         BODY='{"cmd":"reset"}'
         ;;
-    c1)
-        BODY='{"cmd":"set","case":"c1"}'
-        ;;
     check)
         BODY='{"cmd":"check"}'
         ;;
+    intermittent-01)
+        BODY='{"cmd":"set","case":"intermittent-01"}'
+        ;;
+    intermittent-02)
+        # Optional env overrides: LOOP_TIME_SECS (default 10), LOOP_AMOUNT_MB (default 10)
+        LOOP_TIME_SECS="${LOOP_TIME_SECS:-10}"
+        LOOP_AMOUNT_MB="${LOOP_AMOUNT_MB:-10}"
+        BODY="{\"cmd\":\"set\",\"case\":\"intermittent-02\",\"loop_time_secs\":${LOOP_TIME_SECS},\"loop_amount_mb\":${LOOP_AMOUNT_MB}}"
+        ;;
     "")
         echo "Usage: $(basename "$0") [HOST] <case>" >&2
-        echo "Cases: idle | c1 | check" >&2
+        echo "Cases: idle | c1 | check | intermittent-01 | intermittent-02" >&2
         exit 1
         ;;
     *)
         echo "Unknown case: $CASE" >&2
-        echo "Cases: idle | c1 | check" >&2
+        echo "Cases: idle | c1 | check | intermittent-01 | intermittent-02" >&2
         exit 1
         ;;
 esac

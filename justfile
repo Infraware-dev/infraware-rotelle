@@ -40,12 +40,18 @@ run:
     mkdir -p tmp/data
     DATA_DIR=./tmp/data cargo run --manifest-path rotelle/Cargo.toml
 
-# Run hurl control-path test sequence against the rotelle service
+# Run a single failure file against the rotelle service.
+run-case FILE:
+    hurl \
+      --variable rotelle_service_host={{rotelle_service_host}} \
+      tests/hurl-case/{{FILE}}.hurl
+
+# Run hurl control-path test sequence against the rotelle service (future multitest sequence)
 test-hurl:
     hurl \
       --test \
       --variable rotelle_service_host={{rotelle_service_host}} \
-      tests/hurl/c0-c1-check.hurl
+      tests/hurl-case/check.hurl
 
 # Full pipeline: build binary, build image, load into cluster, deploy
 ship:

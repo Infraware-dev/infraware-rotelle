@@ -25,6 +25,9 @@ async fn main() -> Result<(), std::io::Error> {
     let state = State {
         failure_case: Arc::new(Mutex::new(initial)),
         state_file,
+        access_count: Arc::new(Mutex::new(0)),
+        memory_sink: Arc::new(Mutex::new(Vec::new())),
+        leak_task: Arc::new(Mutex::new(None)),
     };
 
     Server::new(TcpListener::bind("0.0.0.0:8080"))

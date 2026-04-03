@@ -1,9 +1,23 @@
 use poem::{handler, web::{Data, Html}};
+use tracing::info;
 use crate::state::State;
+
+/// Number of index accesses between crashes in intermittent-01 mode.
+const INTERMITTENT_01_CRASH_EVERY: u32 = 5;
 
 #[handler]
 pub fn index(state: Data<&State>) -> Html<String> {
-    let case = state.failure_case.lock().unwrap();
+    let case = state.failure_case.lock().unwrap().clone();
+
+    if case == "intermittent-01" {
+        let mut count = state.access_count.lock().unwrap();
+        *count += 1;
+        if (*count).is_multiple_of(INTERMITTENT_01_CRASH_EVERY) {
+            info!(count = *count, "intermittent-01: simulating crash");
+            std::process::exit(1);
+        }
+    }
+
     Html(format!(
         r#"<!DOCTYPE html>
 <html>
