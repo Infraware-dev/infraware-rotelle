@@ -1,6 +1,9 @@
-use poem::{handler, web::{Data, Html}};
-use tracing::info;
 use crate::state::State;
+use poem::{
+    handler,
+    web::{Data, Html},
+};
+use tracing::info;
 
 /// Number of index accesses between crashes in intermittent-01 mode.
 const INTERMITTENT_01_CRASH_EVERY: u32 = 5;

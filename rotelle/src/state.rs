@@ -40,5 +40,8 @@ pub fn load_state(path: &str) -> String {
 }
 
 pub fn persist_state(path: &str, case: &str) {
-    let _ = std::fs::write(path, serde_json::json!({ "failure_case": case }).to_string());
+    let _ = std::fs::write(
+        path,
+        serde_json::json!({ "failure_case": case }).to_string(),
+    );
 }
