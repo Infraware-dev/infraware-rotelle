@@ -1,6 +1,6 @@
 FROM scratch
 
-ARG MUSL_TARGET=aarch64-unknown-linux-musl
+ARG MUSL_TARGET
 COPY rotelle/target/${MUSL_TARGET}/release/rotelle /usr/local/bin/rotelle
 
 EXPOSE 8080
