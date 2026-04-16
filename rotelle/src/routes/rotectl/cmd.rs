@@ -53,6 +53,13 @@ pub fn cmd(
     }
 }
 
+fn get_noise() -> u8 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.subsec_nanos() as u8)
+        .unwrap_or(0xAB)
+}
+
 fn start_leak_task(state: &State, loop_time_secs: Option<u64>, loop_amount_mb: Option<usize>) {
     let interval_secs = loop_time_secs.unwrap_or(10);
     let amount_mb = loop_amount_mb.unwrap_or(10);
@@ -61,7 +68,11 @@ fn start_leak_task(state: &State, loop_time_secs: Option<u64>, loop_amount_mb: O
     let abort = tokio::spawn(async move {
         loop {
             tokio::time::sleep(tokio::time::Duration::from_secs(interval_secs)).await;
-            let chunk = vec![0u8; amount_mb * 1024 * 1024];
+            let mut chunk = vec![0u8; amount_mb * 1024 * 1024];
+            let noise = get_noise();
+            for (i, page) in chunk.chunks_mut(4096).enumerate() {
+                page[0] = noise.wrapping_add(i as u8);
+            }
             info!(amount_mb, "intermittent-02: allocated memory chunk");
             sink.lock().unwrap().push(chunk);
         }
