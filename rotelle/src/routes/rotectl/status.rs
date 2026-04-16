@@ -1,5 +1,8 @@
-use poem::{handler, web::{Data, Json}};
 use crate::state::State;
+use poem::{
+    handler,
+    web::{Data, Json},
+};
 
 #[handler]
 pub fn status(state: Data<&State>) -> Json<serde_json::Value> {

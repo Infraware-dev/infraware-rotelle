@@ -1,8 +1,12 @@
-use poem::{handler, http::StatusCode, web::{Data, Json}};
+use crate::state::{State, persist_state};
+use poem::{
+    handler,
+    http::StatusCode,
+    web::{Data, Json},
+};
 use serde::Deserialize;
 use std::sync::Arc;
 use tracing::info;
-use crate::state::{persist_state, State};
 
 #[derive(Deserialize)]
 pub struct Cmd {
@@ -15,10 +19,7 @@ pub struct Cmd {
 }
 
 #[handler]
-pub fn cmd(
-    state: Data<&State>,
-    Json(body): Json<Cmd>,
-) -> (StatusCode, Json<serde_json::Value>) {
+pub fn cmd(state: Data<&State>, Json(body): Json<Cmd>) -> (StatusCode, Json<serde_json::Value>) {
     match body.cmd.as_str() {
         "set" => {
             let case = body.case.unwrap_or_else(|| "none, idle".to_string());
@@ -29,14 +30,20 @@ pub fn cmd(
             *state.failure_case.lock().unwrap() = case.clone();
             persist_state(&state.state_file, &case);
             info!(failure_case = case, "failure case set");
-            (StatusCode::OK, Json(serde_json::json!({ "ok": true, "failure_case": case })))
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({ "ok": true, "failure_case": case })),
+            )
         }
         "reset" => {
             state.reset_behavioral();
             *state.failure_case.lock().unwrap() = "none, idle".to_string();
             persist_state(&state.state_file, "none, idle");
             info!(failure_case = "none, idle", "failure case reset");
-            (StatusCode::OK, Json(serde_json::json!({ "ok": true, "failure_case": "none, idle" })))
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({ "ok": true, "failure_case": "none, idle" })),
+            )
         }
         "check" => {
             state.reset_behavioral();
@@ -44,7 +51,10 @@ pub fn cmd(
             *state.failure_case.lock().unwrap() = case.clone();
             persist_state(&state.state_file, &case);
             info!(failure_case = case, "failure case set");
-            (StatusCode::OK, Json(serde_json::json!({ "ok": true, "failure_case": case })))
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({ "ok": true, "failure_case": case })),
+            )
         }
         unknown => (
             StatusCode::BAD_REQUEST,
@@ -76,7 +86,8 @@ fn start_leak_task(state: &State, loop_time_secs: Option<u64>, loop_amount_mb: O
             info!(amount_mb, "intermittent-02: allocated memory chunk");
             sink.lock().unwrap().push(chunk);
         }
-    }).abort_handle();
+    })
+    .abort_handle();
 
     *state.leak_task.lock().unwrap() = Some(abort);
 }

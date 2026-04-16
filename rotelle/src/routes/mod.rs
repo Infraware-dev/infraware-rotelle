@@ -1,6 +1,6 @@
-pub mod rotectl;
 pub mod health;
 pub mod index;
+pub mod rotectl;
 
 use poem::{Route, get, post};
 
