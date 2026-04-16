@@ -1,2 +1,4 @@
 CLAUDE.local.md
 tmp/
+.env
+.idea
