@@ -5,6 +5,7 @@ use poem::{EndpointExt, Server, listener::TcpListener, middleware::AddData};
 use state::{State, load_state};
 use std::sync::{Arc, Mutex};
 use tracing::{error, info};
+use crate::routes::rotectl::cmd::start_leak_task;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -20,6 +21,8 @@ async fn main() -> Result<(), std::io::Error> {
     let state_file = format!("{data_dir}/state.json");
     let initial = load_state(&state_file);
 
+    let is_intermittent_02: bool = initial == "intermittent-02";
+
     info!(data_dir, failure_case = initial, "rotelle starting");
 
     let state = State {
@@ -29,6 +32,12 @@ async fn main() -> Result<(), std::io::Error> {
         memory_sink: Arc::new(Mutex::new(Vec::new())),
         leak_task: Arc::new(Mutex::new(None)),
     };
+
+    // Restart memleak after pod-restart
+    if is_intermittent_02 {
+        info!("Resuming intermittent-02 memory leak task...");
+        start_leak_task(&state, None, None);
+    }
 
     Server::new(TcpListener::bind("0.0.0.0:8080"))
         .run(routes::routes().with(AddData::new(state)))

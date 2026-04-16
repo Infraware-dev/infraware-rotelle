@@ -70,7 +70,7 @@ fn get_noise() -> u8 {
         .unwrap_or(0xAB)
 }
 
-fn start_leak_task(state: &State, loop_time_secs: Option<u64>, loop_amount_mb: Option<usize>) {
+pub fn start_leak_task(state: &State, loop_time_secs: Option<u64>, loop_amount_mb: Option<usize>) {
     let interval_secs = loop_time_secs.unwrap_or(10);
     let amount_mb = loop_amount_mb.unwrap_or(10);
     let sink = Arc::clone(&state.memory_sink);
