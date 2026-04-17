@@ -40,6 +40,7 @@ build_binary() {
 build_image() {
     info "Building Docker image '$IMAGE_NAME'..."
     docker build \
+        --build-arg MUSL_TARGET="$MUSL_TARGET" \
         -f "$REPO_ROOT/docker/Dockerfile" \
         -t "$IMAGE_NAME" \
         "$REPO_ROOT"
