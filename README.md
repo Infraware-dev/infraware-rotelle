@@ -65,11 +65,88 @@ built container image reaches the cluster nodes**.
 `scripts/load-rotelle.sh` detects the active kubectl context name and selects
 the right strategy automatically for the providers listed above.
 
-raw yml kubectl specs should be used to load the app
-with a frontend default loadbalancer (or TBD Helm, but more direct control is preferred)
+## Deploying Rotelle
+
+### Users (published image)
+
+`k8s/rotelle.yaml` pulls the published image from the GitHub Container Registry and
+deploys into the `rotelle` namespace.
+
+```sh
+kubectl apply -f k8s/rotelle.yaml
+kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
+```
+
+Access the service via port-forward:
+
+```sh
+kubectl port-forward -n rotelle svc/rotelle 8080:8080
+```
+
+Some Kubernetes test clusters may map ports to the local host network, in which case the
+port forward is not needed and rotelle can be accessed via:
+
+```sh
+curl http://127.0.0.1:8080
+```
+
+To remove:
+
+```sh
+kubectl delete -f k8s/rotelle.yaml
+```
+
+### Developers (local build)
+
+`k8s/rotelle-dev.yaml` references the locally built `rotelle:dev` image with
+`imagePullPolicy: Never` and deploys into the `rotelle-dev` namespace.
+
+**Quick path** — `just deploy` builds the binary and image, loads it into the cluster if
+needed, applies the manifest, and waits for rollout:
+
+```sh
+just deploy
+```
+
+**Full pipeline** — `scripts/load-rotelle.sh` does the same steps and handles image
+loading automatically based on the current kubectl context (see the table above):
+
+```sh
+scripts/load-rotelle.sh
+# or equivalently:
+just ship
+```
+
+**Step by step** — useful when iterating on the image or manifests:
+
+```sh
+just docker-build                               # build binary + Docker image
+# load into cluster if required (kind, minikube) — see table above
+kubectl apply -f k8s/rotelle-dev.yaml
+kubectl rollout status deployment/rotelle -n rotelle-dev --timeout=60s
+```
+
+Access the dev deployment:
+
+```sh
+kubectl port-forward -n rotelle-dev svc/rotelle 8080:8080
+```
+
+After rebuilding the image, restart the pod to pick it up (kind/minikube only — shared-daemon
+clusters see the new image on the next `kubectl rollout restart`):
+
+```sh
+just restart
+```
+
+To remove the dev deployment:
+
+```sh
+just undeploy
+```
 
 Curl and/or hurl can be used to add scripts or just targets to help
-access and control the rotelle interface
+access and control the rotelle interface.
 
 # Failure cases
 
