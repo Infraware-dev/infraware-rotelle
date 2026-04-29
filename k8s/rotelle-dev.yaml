@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: rotelle
+  name: rotelle-dev
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: rotelle
-  namespace: rotelle
+  namespace: rotelle-dev
   labels:
     app: rotelle
 spec:
@@ -22,8 +22,8 @@ spec:
     spec:
       containers:
         - name: rotelle
-          image: ghcr.io/infraware-dev/infraware-rotelle:v0.1.0
-          imagePullPolicy: Always
+          image: rotelle:dev
+          imagePullPolicy: Never
           ports:
             - name: http
               containerPort: 8080
@@ -56,7 +56,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: rotelle-state
-  namespace: rotelle
+  namespace: rotelle-dev
 spec:
   accessModes:
     - ReadWriteOnce
@@ -68,7 +68,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: rotelle
-  namespace: rotelle
+  namespace: rotelle-dev
 spec:
   selector:
     app: rotelle

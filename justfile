@@ -10,15 +10,29 @@ _default:
 
 # Apply k8s manifests and wait for rollout
 deploy: docker-build
-    kubectl apply -f k8s/rotelle.yaml
-    kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
+    kubectl apply -f k8s/rotelle-dev.yaml
+    kubectl rollout status deployment/rotelle -n rotelle-dev --timeout=60s
 
 # Delete using the k8s manifest (for a clean start)
 undeploy:
+    kubectl delete -f k8s/rotelle-dev.yaml
+
+# deploy using k8s manifest pointing to a built image
+deploy-rel:
+    kubectl apply -f k8s/rotelle.yaml
+    kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
+
+# Delete using the k8s manifest
+undeploy-rel:
     kubectl delete -f k8s/rotelle.yaml
 
-# Restart pods to pick up a newly loaded image (imagePullPolicy: Never)
+# Restart pods to pick up a newly loaded image
 restart:
+    kubectl rollout restart deployment/rotelle -n rotelle-dev
+    kubectl rollout status deployment/rotelle -n rotelle-dev --timeout=60s
+
+# Restart release pods
+restart-rel:
     kubectl rollout restart deployment/rotelle -n rotelle
     kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
 
