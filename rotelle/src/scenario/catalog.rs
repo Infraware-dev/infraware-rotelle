@@ -1,4 +1,6 @@
 use std::sync::Arc;
+use crate::scenario::service_unreachable::ServiceUnreachableScenario;
+
 use super::check::Check;
 use super::idle::Idle;
 use super::intermittent_01::Intermittent01Scenario;
@@ -17,5 +19,6 @@ pub fn all() -> Vec<Factory> {
         Box::new(|| Arc::new(Intermittent01Scenario::new())),
         Box::new(|| Arc::new(Intermittent02Scenario::new())),
         Box::new(|| Arc::new(MissingEnvVarScenario::new())),
+        Box::new(|| Arc::new(ServiceUnreachableScenario::new())),
     ]
 }
