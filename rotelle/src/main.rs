@@ -1,11 +1,14 @@
 mod routes;
+mod scenario;
 mod state;
 
-use poem::{EndpointExt, Server, listener::TcpListener, middleware::AddData};
-use state::{State, load_state};
 use std::sync::{Arc, Mutex};
+use scenario::catalog;
+use scenario::idle::Idle;
+use scenario::registry::ScenarioRegistry;
+use state::{AppState, load_state};
+use poem::{EndpointExt, Server, listener::TcpListener, middleware::AddData};
 use tracing::{error, info};
-use crate::routes::rotectl::cmd::start_leak_task;
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -19,27 +22,24 @@ async fn main() -> Result<(), std::io::Error> {
     }
 
     let state_file = format!("{data_dir}/state.json");
-    let initial = load_state(&state_file);
+    let registry = ScenarioRegistry::from_catalog(catalog::all());
 
-    let is_intermittent_02: bool = initial == "intermittent-02";
+    let (case, params) = load_state(&state_file);
+    info!(data_dir, failure_case = %case, "rotelle starting");
 
-    info!(data_dir, failure_case = initial, "rotelle starting");
+    let initial = registry
+        .create(&case)
+        .unwrap_or_else(|| Arc::new(Idle::new()));
 
-    let state = State {
-        failure_case: Arc::new(Mutex::new(initial)),
+    initial.on_resume(&params);
+
+    let app_state = AppState {
+        active_scenario: Arc::new(Mutex::new(initial)),
         state_file,
-        access_count: Arc::new(Mutex::new(0)),
-        memory_sink: Arc::new(Mutex::new(Vec::new())),
-        leak_task: Arc::new(Mutex::new(None)),
+        registry: Arc::new(registry),
     };
 
-    // Restart memleak after pod-restart
-    if is_intermittent_02 {
-        info!("Resuming intermittent-02 memory leak task...");
-        start_leak_task(&state, None, None);
-    }
-
     Server::new(TcpListener::bind("0.0.0.0:8080"))
-        .run(routes::routes().with(AddData::new(state)))
+        .run(routes::routes().with(AddData::new(app_state)))
         .await
 }
