@@ -3,6 +3,7 @@ use super::check::Check;
 use super::idle::Idle;
 use super::intermittent_01::Intermittent01Scenario;
 use super::intermittent_02::Intermittent02Scenario;
+use super::missing_env_var::MissingEnvVarScenario;
 use super::registry::Factory;
 
 /// All built-in failure scenarios.
@@ -15,5 +16,6 @@ pub fn all() -> Vec<Factory> {
         Box::new(|| Arc::new(Check::new())),
         Box::new(|| Arc::new(Intermittent01Scenario::new())),
         Box::new(|| Arc::new(Intermittent02Scenario::new())),
+        Box::new(|| Arc::new(MissingEnvVarScenario::new())),
     ]
 }

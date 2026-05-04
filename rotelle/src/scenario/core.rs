@@ -26,6 +26,11 @@ impl ActivationParams {
         self.0.get(key)?.as_u64().map(|v| v as usize)
     }
 
+    /// Read a param as `String` — use for named configuration values (e.g. `required_var`).
+    pub fn get_string(&self, key: &str) -> Option<String> {
+        self.0.get(key)?.as_str().map(|s| s.to_string())
+    }
+
     /// Serialize the whole param map to JSON — use in `status_extras` to echo active params into `/rotectl/status`.
     pub fn to_json(&self) -> Value {
         serde_json::to_value(self).unwrap_or(Value::Null)
@@ -79,6 +84,11 @@ pub enum IndexEffect {
     Respond(String),
     /// Exit the process — Kubernetes restarts the pod.
     Exit(i32),
+    /// Hold the connection open indefinitely — simulates a Service with no reachable backends.
+    /// The index route handler sleeps the async task; the thread pool stays unblocked.
+    Hang,
+    /// Return an HTTP response with a specific status code and HTML body.
+    RespondWithStatus(u16, String),
 }
 
 // ── HTML helper ───────────────────────────────────────────────────────────────
@@ -86,12 +96,47 @@ pub enum IndexEffect {
 pub fn page_html(case: &str, body: &str) -> String {
     format!(
         r#"<!DOCTYPE html>
-<html>
-<head><title>Rotelle</title></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rotelle</title>
+  <style>
+    *, *::before, *::after {{ box-sizing: border-box; }}
+    body {{
+      font-family: system-ui, sans-serif;
+      background: #f5f5f5;
+      color: #222;
+      margin: 0;
+      padding: 2rem 1rem;
+    }}
+    .card {{
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      max-width: 560px;
+      margin: 0 auto;
+      padding: 2rem;
+    }}
+    h1 {{ margin: 0 0 1rem; font-size: 1.4rem; color: #111; }}
+    .case {{
+      display: inline-block;
+      background: #f0f0f0;
+      border-radius: 4px;
+      padding: 0.2em 0.5em;
+      font-family: monospace;
+      font-size: 0.95rem;
+    }}
+    p {{ margin: 0.75rem 0 0; color: #444; }}
+  </style>
+</head>
 <body>
-<h1>Rotelle</h1>
-<p>Current failure case: <strong>{case}</strong></p>
-{body}</body>
+  <div class="card">
+    <h1>Rotelle</h1>
+    <p>Active case: <span class="case">{case}</span></p>
+    {body}
+  </div>
+</body>
 </html>"#
     )
 }
