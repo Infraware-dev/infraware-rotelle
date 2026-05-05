@@ -98,14 +98,111 @@ memory limits.
 
 ---
 
+### missing-env-var
+
+**API case name:** `missing-env-var`  
+**Source:** `src/scenario/missing_env_var.rs`
+
+**What it simulates:** A deployment that exits on startup because a required
+environment variable is absent, causing CrashLoopBackOff.
+
+On first activation a 500 ms-delayed exit is spawned so the HTTP response and
+state are persisted before the process dies. On every subsequent pod restart
+(`on_resume`) the check runs immediately — if the variable is still absent, the
+process exits before the server starts, reproducing the startup-failure loop.
+Adding the variable to the deployment "fixes" the scenario without a reset.
+
+**Parameters:**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `required_var` | String | `REQUIRED_APP_SECRET` | Name of the environment variable to check |
+
+**Activation example:**
+```json
+{ "cmd": "set", "case": "missing-env-var", "required_var": "DATABASE_URL" }
+```
+
+**`/rotectl/status` extras:**
+```json
+{ "required_var": "DATABASE_URL", "var_present": false }
+```
+
+**Diagnosis value:**  
+Identifies missing configuration as the root cause of a CrashLoopBackOff.
+Teaches operators to check `kubectl describe pod` for exit code 1 with no
+visible error, then inspect env vars on the deployment.
+
+**Hurl test:** `tests/hurl-case/missing-env-var.hurl`
+
+---
+
+### service-unreachable
+
+**API case name:** `service-unreachable`  
+**Source:** `src/scenario/service_unreachable.rs`
+
+**What it simulates:** A Kubernetes Service whose selector does not match any
+pod labels — the pod is healthy but receives no traffic.
+
+Every `GET /` hangs the connection indefinitely (the async task sleeps; the
+thread pool stays unblocked). The control plane (`/rotectl/*`) remains fully
+responsive so the scenario can be reset while connections are hung.
+
+**Parameters:** none
+
+**Activation example:**
+```json
+{ "cmd": "set", "case": "service-unreachable" }
+```
+
+**Observe the hang:**
+```sh
+curl --max-time 5 http://localhost:8080/
+```
+
+**Diagnosis value:**  
+Isolates traffic-routing failures from application failures. When `GET /`
+times out but `/rotectl/status` succeeds, the pod is alive but unreachable
+via the Service — pointing to a selector or label mismatch.
+
+**Hurl test:** `tests/hurl-case/service-unreachable.hurl`
+
+---
+
+### ingress-conflict
+
+**API case name:** `ingress-conflict`  
+**Source:** `src/scenario/ingress_conflict.rs`
+
+**What it simulates:** Routing conflicts from having both a LoadBalancer
+Service and an Ingress controller configured simultaneously.
+
+Returns HTTP 502 on every 3rd `GET /`; other requests return 200. The counter
+resets on each activation.
+
+**Parameters:** none
+
+**Activation example:**
+```json
+{ "cmd": "set", "case": "ingress-conflict" }
+```
+
+**`/rotectl/status` extras:**
+```json
+{ "request_count": 4, "fail_every": 3 }
+```
+
+**Diagnosis value:**  
+Reproduces the intermittent 502 errors that appear when both a LoadBalancer
+Service and an Ingress rule compete to route traffic to the same workload.
+Helps operators correlate gateway errors with duplicate routing configuration.
+
+**Hurl test:** `tests/hurl-case/ingress-conflict.hurl`
+
+---
+
 ## Proposed
 
-The following cases are planned but not yet implemented. Contributions welcome
-— see [CONTRIBUTING.md](../CONTRIBUTING.md).
-
-- **Pod deployment failure via k8s config** — missing required environment
-  variable causes the app to exit on startup.
-- **Service unreachable** — k8s Service selector mismatch; pod is healthy but
-  no traffic reaches it.
-- **Overspecified ingress** — both a LoadBalancer Service and an Ingress
-  controller are configured, causing routing conflicts.
+No additional scenarios are currently planned. Contributions welcome — see
+[CONTRIBUTING.md](../CONTRIBUTING.md).

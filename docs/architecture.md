@@ -48,7 +48,7 @@ One file defines everything a scenario works with:
   keys they care about, extra keys are ignored.
 - `Scenario` trait — five required methods (`name`, `description`, `activate`,
   `deactivate`, `on_index_request`) plus two optional ones with defaults.
-- `IndexEffect` — what `on_index_request` returns: `Respond(html)` or `Exit(code)`.
+- `IndexEffect` — what `on_index_request` returns: `Respond(html)`, `Exit(code)`, `Hang` (hold connection open), or `RespondWithStatus(status, html)`.
 - `page_html` — helper that renders the standard index page.
 
 ### `catalog.rs` — the scenario list
