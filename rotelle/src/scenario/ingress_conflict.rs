@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use super::{ActivationParams, IndexEffect, Scenario, page_html};
+use super::{ActivationParams, IndexEffect, Scenario};
 
 const FAIL_EVERY: u32 = 3;
 
@@ -44,12 +44,9 @@ impl Scenario for IngressConflictScenario {
             IndexEffect::RespondWithStatus(502, gateway_error_html(n))
         } else {
             let next_fail = (n / FAIL_EVERY + 1) * FAIL_EVERY;
-            IndexEffect::Respond(page_html(
-                "ingress-conflict",
-                &format!(
-                    "<p>Request <strong>{n}</strong>: routed correctly via LoadBalancer. \
-                     Next conflict (502) at request <strong>{next_fail}</strong>.</p>"
-                ),
+            IndexEffect::Respond(format!(
+                "<p>Request <strong>{n}</strong>: routed correctly via LoadBalancer. \
+                 Next conflict (502) at request <strong>{next_fail}</strong>.</p>"
             ))
         }
     }

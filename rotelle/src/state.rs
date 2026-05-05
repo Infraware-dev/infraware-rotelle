@@ -1,6 +1,6 @@
 use std::sync::{Arc, Mutex};
-use crate::scenario::{ActivationParams, Scenario};
-use crate::scenario::registry::ScenarioRegistry;
+use crate::core::{ActivationParams, Scenario};
+use crate::core::registry::ScenarioRegistry;
 
 /// Shared application state, cheaply cloneable via inner `Arc`s.
 #[derive(Clone)]

@@ -1,3 +1,4 @@
+mod core;
 mod routes;
 mod scenario;
 mod state;
@@ -5,7 +6,7 @@ mod state;
 use std::sync::{Arc, Mutex};
 use scenario::catalog;
 use scenario::idle::Idle;
-use scenario::registry::ScenarioRegistry;
+use core::registry::ScenarioRegistry;
 use state::{AppState, load_state};
 use poem::{EndpointExt, Server, listener::TcpListener, middleware::AddData};
 use tracing::{error, info};

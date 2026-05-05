@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use super::{ActivationParams, IndexEffect, Scenario, page_html};
+use super::{ActivationParams, IndexEffect, Scenario};
 
 const CRASH_EVERY: u32 = 5;
 
@@ -43,13 +43,10 @@ impl Scenario for Intermittent01Scenario {
             IndexEffect::Exit(1)
         } else {
             let next_crash = (n / CRASH_EVERY + 1) * CRASH_EVERY;
-            IndexEffect::Respond(page_html(
-                "intermittent-01",
-                &format!(
-                    "<p>Crash every <strong>N={CRASH_EVERY}</strong> accesses. \
-                     Current count: <strong>{n}</strong>. \
-                     Next crash at: <strong>{next_crash}</strong></p>"
-                ),
+            IndexEffect::Respond(format!(
+                "<p>Crash every <strong>N={CRASH_EVERY}</strong> accesses. \
+                 Current count: <strong>{n}</strong>. \
+                 Next crash at: <strong>{next_crash}</strong></p>"
             ))
         }
     }

@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::task::AbortHandle;
-use super::{ActivationParams, IndexEffect, Scenario, page_html};
+use super::{ActivationParams, IndexEffect, Scenario};
 
 /// Simulates memory exhaustion: background task leaks memory until OOMKill.
 pub struct Intermittent02Scenario {
@@ -63,9 +63,8 @@ impl Scenario for Intermittent02Scenario {
 
     fn on_index_request(&self) -> IndexEffect {
         let chunks = self.memory_sink.lock().unwrap().len();
-        IndexEffect::Respond(page_html(
-            "intermittent-02",
-            &format!("<p>Allocated chunks so far: <strong>{chunks}</strong></p>"),
+        IndexEffect::Respond(format!(
+            "<p>Allocated chunks so far: <strong>{chunks}</strong></p>"
         ))
     }
 

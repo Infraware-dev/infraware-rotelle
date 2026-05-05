@@ -1,4 +1,4 @@
-use super::{ActivationParams, IndexEffect, Scenario, page_html};
+use super::{ActivationParams, IndexEffect, Scenario};
 
 pub struct Check;
 
@@ -18,6 +18,6 @@ impl Scenario for Check {
     fn deactivate(&self) {}
 
     fn on_index_request(&self) -> IndexEffect {
-        IndexEffect::Respond(page_html("check", ""))
+        IndexEffect::Respond(String::new())
     }
 }

@@ -1,4 +1,4 @@
-use super::{ActivationParams, IndexEffect, Scenario, page_html};
+use super::{ActivationParams, IndexEffect, Scenario};
 
 pub struct Idle;
 
@@ -18,6 +18,6 @@ impl Scenario for Idle {
     fn deactivate(&self) {}
 
     fn on_index_request(&self) -> IndexEffect {
-        IndexEffect::Respond(page_html("none, idle", ""))
+        IndexEffect::Respond(String::new())
     }
 }

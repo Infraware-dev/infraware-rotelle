@@ -7,7 +7,7 @@ use super::intermittent_02::Intermittent02Scenario;
 use super::missing_env_var::MissingEnvVarScenario;
 use super::ingress_conflict::IngressConflictScenario;
 use super::service_unreachable::ServiceUnreachableScenario;
-use super::registry::Factory;
+use crate::core::registry::Factory;
 
 /// All built-in failure scenarios.
 ///

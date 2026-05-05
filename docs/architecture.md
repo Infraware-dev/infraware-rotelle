@@ -14,19 +14,25 @@ an HTTP server (via [Poem](https://github.com/poem-web/poem)) with two surfaces:
 src/
 ├── main.rs                    — startup: build registry, load state, start server
 ├── state.rs                   — AppState, load/persist state to disk
+├── core/
+│   ├── mod.rs                 — module index + re-exports
+│   ├── scenario_template.rs   — Scenario trait, ActivationParams, IndexEffect, page_html
+│   └── registry.rs            — ScenarioRegistry (name → factory lookup)
 ├── scenario/
-│   ├── mod.rs                 — pub mod declarations + re-exports
-│   ├── core.rs                — Scenario trait, ActivationParams, IndexEffect, page_html
+│   ├── mod.rs                 — pub mod declarations + re-exports from core
 │   ├── catalog.rs             — list of all scenario factories  ← add new scenarios here
-│   ├── registry.rs            — ScenarioRegistry (name → factory lookup)
 │   ├── idle.rs                — "none, idle"
 │   ├── check.rs               — "check"
 │   ├── intermittent_01.rs     — "intermittent-01"
-│   └── intermittent_02.rs     — "intermittent-02"
+│   ├── intermittent_02.rs     — "intermittent-02"
+│   ├── missing_env_var.rs     — "missing-env-var"
+│   ├── service_unreachable.rs — "service-unreachable"
+│   └── ingress_conflict.rs    — "ingress-conflict"
 └── routes/
     ├── mod.rs
     ├── index.rs               — GET /  → active scenario's on_index_request()
     ├── health.rs              — GET /health
+    ├── logo.rs                — GET /logo.png, GET /favicon.png — compiled-in static assets
     └── rotectl/
         ├── cmd.rs             — POST /rotectl/cmd — activates via registry
         ├── status.rs          — GET /rotectl/status
@@ -40,7 +46,7 @@ line in `catalog.rs`, and one line in `mod.rs` — plus a hurl test and a
 `rotelle-cases.md` entry. Everything else (routing, persistence, status) is
 wired up automatically.
 
-### `core.rs` — the full contract
+### `core/scenario_template.rs` — the full contract
 
 One file defines everything a scenario works with:
 
@@ -49,7 +55,7 @@ One file defines everything a scenario works with:
 - `Scenario` trait — five required methods (`name`, `description`, `activate`,
   `deactivate`, `on_index_request`) plus two optional ones with defaults.
 - `IndexEffect` — what `on_index_request` returns: `Respond(html)`, `Exit(code)`, `Hang` (hold connection open), or `RespondWithStatus(status, html)`.
-- `page_html` — helper that renders the standard index page.
+- `page_html(case, description, body)` — helper that renders the standard index page; `description` comes from `Scenario::description()` and is shown below the case name.
 
 ### `catalog.rs` — the scenario list
 

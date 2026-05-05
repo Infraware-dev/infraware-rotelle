@@ -68,7 +68,7 @@ that need a counter, or `intermittent_02.rs` for scenarios with a background tas
 ```rust
 // rotelle/src/scenario/my_scenario.rs
 
-use super::{ActivationParams, IndexEffect, Scenario, page_html};
+use super::{ActivationParams, IndexEffect, Scenario};
 
 pub struct MyScenario;
 
@@ -92,7 +92,7 @@ impl Scenario for MyScenario {
     }
 
     fn on_index_request(&self) -> IndexEffect {
-        IndexEffect::Respond(page_html("my-scenario", "<p>extra content here</p>"))
+        IndexEffect::Respond("<p>extra content here</p>".to_string())
         // or: IndexEffect::Exit(1)  ← crashes the process; k8s restarts the pod
     }
 }

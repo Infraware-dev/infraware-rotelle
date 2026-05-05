@@ -1,5 +1,5 @@
 use std::sync::Mutex;
-use super::{ActivationParams, IndexEffect, Scenario, page_html};
+use super::{ActivationParams, IndexEffect, Scenario};
 
 const DEFAULT_REQUIRED_VAR: &str = "REQUIRED_APP_SECRET";
 
@@ -52,12 +52,9 @@ impl Scenario for MissingEnvVarScenario {
             tracing::warn!(var = %var, "missing-env-var: env var absent, exiting");
             IndexEffect::Exit(1)
         } else {
-            IndexEffect::Respond(page_html(
-                "missing-env-var",
-                &format!(
-                    "<p>Environment variable <code>{var}</code> is present — \
-                     startup check passed.</p>"
-                ),
+            IndexEffect::Respond(format!(
+                "<p>Environment variable <code>{var}</code> is present — \
+                 startup check passed.</p>"
             ))
         }
     }
