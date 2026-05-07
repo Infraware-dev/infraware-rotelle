@@ -1,40 +1,27 @@
-use crate::state::State;
-use poem::{
-    handler,
-    web::{Data, Html},
-};
-use tracing::info;
-
-/// Number of index accesses between crashes in intermittent-01 mode.
-const INTERMITTENT_01_CRASH_EVERY: u32 = 5;
+use crate::core::page_html;
+use crate::scenario::IndexEffect;
+use crate::state::AppState;
+use poem::{IntoResponse, Response, handler, http::StatusCode, web::{Data, Html}};
+use std::time::Duration;
 
 #[handler]
-pub fn index(state: Data<&State>) -> Html<String> {
-    let case = state.failure_case.lock().unwrap().clone();
-
-    let extra = if case == "intermittent-01" {
-        let mut count = state.access_count.lock().unwrap();
-        *count += 1;
-        if (*count).is_multiple_of(INTERMITTENT_01_CRASH_EVERY) {
-            info!(count = *count, "intermittent-01: simulating crash");
-            std::process::exit(1);
-        }
-        format!(
-            "<p>Crash every <strong>N={}</strong> accesses. Current count: <strong>{}</strong></p>",
-            INTERMITTENT_01_CRASH_EVERY, *count
-        )
-    } else {
-        String::new()
+pub async fn index(state: Data<&AppState>) -> Response {
+    // Extract name, description, and effect while holding the lock, then drop it
+    // before any await point — holding a MutexGuard across an await deadlocks.
+    let (name, description, effect) = {
+        let scenario = state.active_scenario.lock().unwrap();
+        (scenario.name(), scenario.description(), scenario.on_index_request())
     };
-
-    Html(format!(
-        r#"<!DOCTYPE html>
-<html>
-<head><title>Rotelle</title></head>
-<body>
-<h1>Rotelle</h1>
-<p>Current failure case: <strong>{case}</strong></p>
-{extra}</body>
-</html>"#
-    ))
+    match effect {
+        IndexEffect::Respond(body) => Html(page_html(name, description, &body)).into_response(),
+        IndexEffect::Exit(code) => std::process::exit(code),
+        IndexEffect::Hang => {
+            tokio::time::sleep(Duration::from_secs(365 * 24 * 3600)).await;
+            unreachable!()
+        }
+        IndexEffect::RespondWithStatus(code, html) => {
+            let status = StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+            (status, Html(html)).into_response()
+        }
+    }
 }
