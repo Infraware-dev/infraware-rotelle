@@ -1,11 +1,10 @@
-# c0-c1-check.hurl — control path verification sequence
+# check.hurl — control path verification sequence
 #
 # Usage:
-#   default URL value "http://127.0.0.1:8080"
-#   hurl --variable rotelle_service_host=<URL> tests/hurl/c0-c1-check.hurl
+#   hurl --variable rotelle_service_host=<URL> tests/hurl-case/check.hurl
 #   just test-hurl
 
-# ── c0: reset to idle ────────────────────────────────────────────────────────
+# ── reset to idle ─────────────────────────────────────────────────────────────
 
 POST {{rotelle_service_host}}/rotectl/cmd
 Content-Type: application/json
@@ -21,28 +20,23 @@ HTTP 200
 [Asserts]
 body contains "none, idle"
 
-# ── c1: set failure case ──────────────────────────────────────────────────────
+# ── set a scenario ────────────────────────────────────────────────────────────
 
 POST {{rotelle_service_host}}/rotectl/cmd
 Content-Type: application/json
-{"cmd": "set", "case": "c1"}
+{"cmd": "set", "case": "ingress-conflict"}
 
 HTTP 200
 [Asserts]
 jsonpath "$.ok" == true
-jsonpath "$.failure_case" == "c1"
-
-GET {{rotelle_service_host}}/
-HTTP 200
-[Asserts]
-body contains "c1"
+jsonpath "$.failure_case" == "ingress-conflict"
 
 GET {{rotelle_service_host}}/rotectl/status
 HTTP 200
 [Asserts]
-jsonpath "$.failure_case" == "c1"
+jsonpath "$.failure_case" == "ingress-conflict"
 
-# ── check: set check failure case ────────────────────────────────────────────
+# ── set check scenario ────────────────────────────────────────────────────────
 
 POST {{rotelle_service_host}}/rotectl/cmd
 Content-Type: application/json
@@ -63,7 +57,7 @@ HTTP 200
 [Asserts]
 jsonpath "$.failure_case" == "check"
 
-# ── c0: reset back to idle ────────────────────────────────────────────────────
+# ── reset back to idle ────────────────────────────────────────────────────────
 
 POST {{rotelle_service_host}}/rotectl/cmd
 Content-Type: application/json

@@ -1,0 +1,83 @@
+name: Bug Report
+description: Something is broken or behaving unexpectedly in Rotelle
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug. Fill in as much as you can — the more detail, the faster we can fix it.
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      description: Which part of Rotelle is affected?
+      options:
+        - Control API (/rotectl/*)
+        - Simulation endpoint (GET /)
+        - A specific scenario (please name it below)
+        - Kubernetes deployment / manifests
+        - scripts/setup-kind.sh or scripts/load-rotelle.sh
+        - CI / build pipeline
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: scenario
+    attributes:
+      label: Scenario name (if applicable)
+      description: "e.g. intermittent-01, missing-env-var"
+      placeholder: "none"
+
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: A clear description of the bug.
+      placeholder: "When I activate intermittent-02 with loop_amount_mb=15, the pod does not restart after memory is exhausted..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      placeholder: "The pod should be OOMKilled and restarted by Kubernetes within ~40 seconds."
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Exact commands you ran.
+      placeholder: |
+        1. `kubectl apply -f k8s/rotelle.yaml`
+        2. `curl -X POST ... -d '{"cmd":"set","case":"intermittent-02","loop_time_secs":10,"loop_amount_mb":15}'`
+        3. `kubectl get pods -n rotelle -w`
+        4. (observed: pod never restarts)
+    validations:
+      required: true
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: Fill in what's relevant.
+      value: |
+        - Rotelle version / image tag:
+        - Kubernetes provider: (kind / minikube / OrbStack / EKS / other)
+        - OS / arch: (Linux x86_64 / macOS arm64 / etc.)
+        - Rust version (if building locally): `rustc --version`
+        - Docker version: `docker --version`
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or output
+      description: "`kubectl logs -n rotelle deploy/rotelle` or curl output"
+      render: shell

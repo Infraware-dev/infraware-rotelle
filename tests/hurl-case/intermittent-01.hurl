@@ -1,12 +1,12 @@
-# intermittent-01.hurl — activate c2 intermittent crash mode
+# intermittent-01.hurl — activate intermittent crash mode
 #
 # Every 5th GET / causes the process to exit; k8s restarts the pod.
-# n_accesses controls how many GET / requests are made (default: 4).
+# Makes 4 requests (one short of the crash threshold) to verify the scenario
+# is active without actually crashing the local server during tests.
 #
 # Usage:
 #   hurl --variable rotelle_service_host=<URL> tests/hurl-case/intermittent-01.hurl
-#   hurl --variable rotelle_service_host=<URL> --variable n_accesses=4 tests/hurl-case/intermittent-01.hurl
-#   just run-hurl tests/hurl-case/intermittent-01.hurl
+#   just run-case intermittent-01
 
 # ── activate intermittent-01 ──────────────────────────────────────────────────
 
@@ -28,7 +28,7 @@ jsonpath "$.failure_case" == "intermittent-01"
 
 GET {{rotelle_service_host}}/
 [Options]
-repeat: {{n_accesses}}
+repeat: 4
 HTTP 200
 [Asserts]
 body contains "intermittent-01"

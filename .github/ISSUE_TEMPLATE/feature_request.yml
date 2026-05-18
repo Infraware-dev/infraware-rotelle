@@ -1,0 +1,69 @@
+name: Feature Request / New Scenario
+description: Propose a new failure scenario or a feature improvement
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Great ideas are welcome! For new failure scenarios, the more concrete the real-world failure you're modeling, the better.
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Type of request
+      options:
+        - New failure scenario
+        - Improvement to an existing scenario
+        - Control API feature
+        - Developer experience / tooling
+        - Documentation
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the real-world Kubernetes failure or gap you want to address.
+      placeholder: |
+        There is no way to simulate a pod that starts successfully but then has its readiness probe fail after N requests, which is a common pattern in misconfigured health-check deployments.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: How would this work? For scenarios, sketch the behavior and any parameters.
+      placeholder: |
+        Add a `readiness-fail` scenario that:
+        - Returns 200 from GET / normally
+        - Returns 503 from GET /health after `fail_after` requests (default: 10)
+        - Parameters: fail_after (u64, default 10), recover_after (u64, optional)
+        This would cause Kubernetes to mark the pod NotReady and stop routing traffic to it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: diagnosis_value
+    attributes:
+      label: Diagnosis / training value
+      description: What would an SRE or AI system learn from observing this scenario?
+      placeholder: |
+        Helps operators distinguish between a failing liveness probe (pod restart) and a failing readiness probe (pod removed from service endpoints but still running). The pod logs are clean; only `kubectl describe pod` reveals the readiness probe failure.
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches you thought about?
+
+  - type: checkboxes
+    id: willing_to_pr
+    attributes:
+      label: Are you willing to submit a PR for this?
+      options:
+        - label: "Yes, I'd like to implement this"
+        - label: "I can help test it"
+        - label: "I'm just proposing the idea"
