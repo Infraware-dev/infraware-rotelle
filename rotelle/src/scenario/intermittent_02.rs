@@ -1,7 +1,7 @@
+use super::{ActivationParams, IndexEffect, Scenario};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::task::AbortHandle;
-use super::{ActivationParams, IndexEffect, Scenario};
 
 /// Simulates memory exhaustion: background task leaks memory until OOMKill.
 pub struct Intermittent02Scenario {

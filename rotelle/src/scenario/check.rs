@@ -3,11 +3,15 @@ use super::{ActivationParams, IndexEffect, Scenario};
 pub struct Check;
 
 impl Check {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 }
 
 impl Scenario for Check {
-    fn name(&self) -> &'static str { "check" }
+    fn name(&self) -> &'static str {
+        "check"
+    }
 
     fn description(&self) -> &'static str {
         "Control checkpoint — marks a known state for test verification."

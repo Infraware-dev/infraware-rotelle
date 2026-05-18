@@ -1,5 +1,5 @@
-use std::sync::Mutex;
 use super::{ActivationParams, IndexEffect, Scenario};
+use std::sync::Mutex;
 
 const FAIL_EVERY: u32 = 3;
 
@@ -39,7 +39,7 @@ impl Scenario for IngressConflictScenario {
         let n = *count;
         tracing::info!(count = n, "ingress-conflict: index access");
 
-        if n % FAIL_EVERY == 0 {
+        if n.is_multiple_of(FAIL_EVERY) {
             tracing::warn!(count = n, "ingress-conflict: simulating 502 gateway error");
             IndexEffect::RespondWithStatus(502, gateway_error_html(n))
         } else {

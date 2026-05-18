@@ -1,6 +1,6 @@
-use std::sync::{Arc, Mutex};
-use crate::core::{ActivationParams, Scenario};
 use crate::core::registry::ScenarioRegistry;
+use crate::core::{ActivationParams, Scenario};
+use std::sync::{Arc, Mutex};
 
 /// Shared application state, cheaply cloneable via inner `Arc`s.
 #[derive(Clone)]
@@ -12,7 +12,11 @@ pub struct AppState {
 
 impl AppState {
     /// Deactivate the current scenario, activate `new`, and persist the change.
-    pub fn switch_scenario(&self, new: Arc<dyn Scenario>, params: ActivationParams) -> &'static str {
+    pub fn switch_scenario(
+        &self,
+        new: Arc<dyn Scenario>,
+        params: ActivationParams,
+    ) -> &'static str {
         let name;
         {
             let mut active = self.active_scenario.lock().unwrap();

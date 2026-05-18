@@ -1,5 +1,5 @@
-use std::sync::Mutex;
 use super::{ActivationParams, IndexEffect, Scenario};
+use std::sync::Mutex;
 
 const CRASH_EVERY: u32 = 5;
 
@@ -38,7 +38,7 @@ impl Scenario for Intermittent01Scenario {
         *count += 1;
         let n = *count;
         tracing::info!(count = n, "intermittent-01: index access");
-        if n % CRASH_EVERY == 0 {
+        if n.is_multiple_of(CRASH_EVERY) {
             tracing::warn!(count = n, "intermittent-01: simulating crash");
             IndexEffect::Exit(1)
         } else {

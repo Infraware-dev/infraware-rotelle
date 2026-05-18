@@ -2,10 +2,10 @@ use std::sync::Arc;
 
 use super::check::Check;
 use super::idle::Idle;
+use super::ingress_conflict::IngressConflictScenario;
 use super::intermittent_01::Intermittent01Scenario;
 use super::intermittent_02::Intermittent02Scenario;
 use super::missing_env_var::MissingEnvVarScenario;
-use super::ingress_conflict::IngressConflictScenario;
 use super::service_unreachable::ServiceUnreachableScenario;
 use crate::core::registry::Factory;
 

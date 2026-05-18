@@ -1,6 +1,6 @@
+use super::Scenario;
 use std::collections::HashMap;
 use std::sync::Arc;
-use super::Scenario;
 
 pub type Factory = Box<dyn Fn() -> Arc<dyn Scenario> + Send + Sync>;
 

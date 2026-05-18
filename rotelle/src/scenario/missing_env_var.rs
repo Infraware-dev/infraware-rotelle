@@ -1,5 +1,5 @@
-use std::sync::Mutex;
 use super::{ActivationParams, IndexEffect, Scenario};
+use std::sync::Mutex;
 
 const DEFAULT_REQUIRED_VAR: &str = "REQUIRED_APP_SECRET";
 

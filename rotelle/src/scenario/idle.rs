@@ -3,11 +3,15 @@ use super::{ActivationParams, IndexEffect, Scenario};
 pub struct Idle;
 
 impl Idle {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 }
 
 impl Scenario for Idle {
-    fn name(&self) -> &'static str { "none, idle" }
+    fn name(&self) -> &'static str {
+        "none, idle"
+    }
 
     fn description(&self) -> &'static str {
         "No failure active — service responds normally."

@@ -1,11 +1,15 @@
-use std::collections::HashMap;
-use std::sync::Arc;
 use crate::scenario::ActivationParams;
 use crate::scenario::check::Check;
 use crate::scenario::idle::Idle;
 use crate::state::AppState;
-use poem::{handler, http::StatusCode, web::{Data, Json}};
+use poem::{
+    handler,
+    http::StatusCode,
+    web::{Data, Json},
+};
 use serde::Deserialize;
+use std::collections::HashMap;
+use std::sync::Arc;
 use tracing::info;
 
 #[derive(Deserialize)]
@@ -28,24 +32,35 @@ pub fn cmd(state: Data<&AppState>, Json(body): Json<Cmd>) -> (StatusCode, Json<s
             match state.registry.create(case) {
                 None => (
                     StatusCode::BAD_REQUEST,
-                    Json(serde_json::json!({"ok": false, "error": format!("unknown case: {case}")})),
+                    Json(
+                        serde_json::json!({"ok": false, "error": format!("unknown case: {case}")}),
+                    ),
                 ),
                 Some(scenario) => {
                     let name = state.switch_scenario(scenario, params);
                     info!(failure_case = name, "failure case set");
-                    (StatusCode::OK, Json(serde_json::json!({"ok": true, "failure_case": name})))
+                    (
+                        StatusCode::OK,
+                        Json(serde_json::json!({"ok": true, "failure_case": name})),
+                    )
                 }
             }
         }
         "reset" => {
             let name = state.switch_scenario(Arc::new(Idle::new()), ActivationParams::default());
             info!(failure_case = name, "failure case reset");
-            (StatusCode::OK, Json(serde_json::json!({"ok": true, "failure_case": name})))
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({"ok": true, "failure_case": name})),
+            )
         }
         "check" => {
             let name = state.switch_scenario(Arc::new(Check::new()), ActivationParams::default());
             info!(failure_case = name, "failure case set");
-            (StatusCode::OK, Json(serde_json::json!({"ok": true, "failure_case": name})))
+            (
+                StatusCode::OK,
+                Json(serde_json::json!({"ok": true, "failure_case": name})),
+            )
         }
         unknown => (
             StatusCode::BAD_REQUEST,

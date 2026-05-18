@@ -3,12 +3,12 @@ mod routes;
 mod scenario;
 mod state;
 
-use std::sync::{Arc, Mutex};
+use core::registry::ScenarioRegistry;
+use poem::{EndpointExt, Server, listener::TcpListener, middleware::AddData};
 use scenario::catalog;
 use scenario::idle::Idle;
-use core::registry::ScenarioRegistry;
 use state::{AppState, load_state};
-use poem::{EndpointExt, Server, listener::TcpListener, middleware::AddData};
+use std::sync::{Arc, Mutex};
 use tracing::{error, info};
 
 #[tokio::main]

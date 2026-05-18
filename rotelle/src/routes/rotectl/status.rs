@@ -1,5 +1,8 @@
 use crate::state::AppState;
-use poem::{handler, web::{Data, Json}};
+use poem::{
+    handler,
+    web::{Data, Json},
+};
 
 #[handler]
 pub fn status(state: Data<&AppState>) -> Json<serde_json::Value> {
@@ -8,10 +11,10 @@ pub fn status(state: Data<&AppState>) -> Json<serde_json::Value> {
         "failure_case": scenario.name(),
         "description": scenario.description(),
     });
-    if let serde_json::Value::Object(extras) = scenario.status_extras() {
-        if let serde_json::Value::Object(ref mut map) = resp {
-            map.extend(extras);
-        }
+    if let serde_json::Value::Object(extras) = scenario.status_extras()
+        && let serde_json::Value::Object(ref mut map) = resp
+    {
+        map.extend(extras);
     }
     Json(resp)
 }
