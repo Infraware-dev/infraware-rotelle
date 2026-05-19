@@ -22,7 +22,7 @@ spec:
     spec:
       containers:
         - name: rotelle
-          image: ghcr.io/infraware-dev/infraware-rotelle:v0.1.0
+          image: ghcr.io/infraware-dev/infraware-rotelle:latest
           imagePullPolicy: Always
           ports:
             - name: http
