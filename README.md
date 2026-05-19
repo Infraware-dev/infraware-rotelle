@@ -1,156 +1,95 @@
-# intro
+# Rotelle
 
-Infra-Rotelle (di supporto) is a repository for a kubernetes app that can used
-to simulate various app failure conditions. It can be used for training people
-and AIs for working with kubernetes operations.
+**Simulate Kubernetes failure scenarios. Train SREs and AI systems to diagnose them.**
 
-The core app is Rotelle, written as a rust web server.  The server can be
-installed into a test kubernetes cluster and used to trigger various failure
-conditions.
+[![CI](https://github.com/infraware-dev/infraware-rotelle/actions/workflows/ci.yml/badge.svg)](https://github.com/infraware-dev/infraware-rotelle/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![Container](https://img.shields.io/badge/container-GHCR-blue)](https://github.com/infraware-dev/infraware-rotelle/pkgs/container/infraware-rotelle)
 
-The support files around Rotelle can also be used to simulate installation and
-configuration failures.
+Rotelle is a lightweight Rust web server that runs inside a Kubernetes cluster and lets you trigger realistic failure conditions on demand. It exposes a clean control API so you can activate, observe and reset scenarios programmatically — making it ideal for SRE training labs, AI evaluation pipelines and chaos engineering foundations.
 
-The web server conttains endpoints to control failure conditions:
+## Features
 
-## Control Endpoints
-- rotectl/cmd
-- rotectl/health
-- rotectl/status
-- rotectl/TBD...
+- **Realistic failure scenarios** — crash-loops, OOMKills, hung connections, missing config, ingress conflicts and more
+- **Always-responsive control plane** — `/rotectl/` endpoints stay up even when a simulation is hanging or crashing
+- **Survives pod restarts** — active scenario is persisted to disk and resumed automatically
+- **Pluggable architecture** — adding a new scenario is a single Rust file + one registration line
+- **Multi-arch container** — published to GHCR for both `amd64` and `arm64`
 
-## Simulation endpoints
+---
 
-Some endpoints of Rotelle are maintained as the simulated failing app
+## Quick Start
 
-- /health
-
-
-# Operation Notes
-
-`kubectl` is the primary interface to the cluster. Any cluster reachable via
-`kubectl cluster-info` is supported — the test tooling does not care how the
-cluster was provisioned.
-
-`scripts/setup-kind.sh` is provided as a reference setup using
-[kind](https://kind.sigs.k8s.io). Future scripts (`setup-colima.sh`,
-`setup-minikube.sh`, etc.) can be added alongside it following the same
-convention: provision the cluster, configure the kubectl context, verify with
-`kubectl cluster-info`.
-
-### Local cluster options
-
-**macOS:** [OrbStack](https://orbstack.dev) (recommended — fast, low overhead, built-in k8s) · [Docker Desktop](https://www.docker.com/products/docker-desktop/) · [Rancher Desktop](https://rancherdesktop.io) · [colima](https://github.com/abiosoft/colima) · [kind](https://kind.sigs.k8s.io)
-
-**Linux:** [kind](https://kind.sigs.k8s.io) (recommended, used by `setup-kind.sh`) · [k3d](https://k3d.io) · [minikube](https://minikube.sigs.k8s.io) · [k3s](https://k3s.io) · [colima](https://github.com/abiosoft/colima)
-
-Once a cluster is available, `scripts/load-rotelle.sh` handles the rest:
-building the binary, packaging the image, loading it into the cluster, and
-applying the manifests in `k8s/`.
-
-## Cluster Image Loading
-
-The main practical difference between cluster providers is **how a locally
-built container image reaches the cluster nodes**.
-
-| Provider | Mechanism | Notes |
-|---|---|---|
-| **kind** | `kind load docker-image` | kind nodes are isolated containers with their own image store, separate from the host Docker daemon. The image must be explicitly loaded. |
-| **colima** | none needed | colima's k8s runs inside the same VM that hosts the Docker daemon. An image built with `docker build` is immediately visible to the cluster. |
-| **Docker Desktop** | none needed | Same as colima — shared daemon. |
-| **Rancher Desktop** | none needed | Same as colima — shared daemon. |
-| **minikube** | `minikube image load` | minikube manages its own image cache; `minikube image load` transfers from the host daemon. |
-| **remote cluster** | push to registry | The cluster cannot reach the host daemon. Build, tag, and push to a registry the cluster can pull from, then update the image reference in `k8s/rotelle.yaml`. |
-
-`scripts/load-rotelle.sh` detects the active kubectl context name and selects
-the right strategy automatically for the providers listed above.
-
-## Deploying Rotelle
-
-### Users (published image)
-
-`k8s/rotelle.yaml` pulls the published image from the GitHub Container Registry and
-deploys into the `rotelle` namespace.
+You need: `kubectl` pointed at any cluster.
 
 ```sh
-kubectl apply -f k8s/rotelle.yaml
+kubectl apply -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle.yaml
 kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
-```
-
-Access the service via port-forward:
-
-```sh
 kubectl port-forward -n rotelle svc/rotelle 8080:8080
 ```
 
-Some Kubernetes test clusters may map ports to the local host network, in which case the
-port forward is not needed and rotelle can be accessed via:
+Trigger your first failure scenario — a pod crash every 5 requests:
 
 ```sh
-curl http://127.0.0.1:8080
+curl -X POST http://localhost:8080/rotectl/cmd \
+  -H 'Content-Type: application/json' \
+  -d '{"cmd": "set", "case": "intermittent-01"}'
 ```
 
-To remove:
+Reset to idle:
 
 ```sh
-kubectl delete -f k8s/rotelle.yaml
+curl -X POST http://localhost:8080/rotectl/cmd \
+  -H 'Content-Type: application/json' \
+  -d '{"cmd": "reset"}'
 ```
 
-### Developers (local build)
-
-`k8s/rotelle-dev.yaml` references the locally built `rotelle:dev` image with
-`imagePullPolicy: Never` and deploys into the `rotelle-dev` namespace.
-
-**Quick path** — `just deploy` builds the binary and image, loads it into the cluster if
-needed, applies the manifest, and waits for rollout:
+Remove when done:
 
 ```sh
-just deploy
+kubectl delete -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle.yaml
 ```
 
-**Full pipeline** — `scripts/load-rotelle.sh` does the same steps and handles image
-loading automatically based on the current kubectl context (see the table above):
+---
+
+## Scenarios
+
+See [docs/rotelle-cases.md](docs/rotelle-cases.md) for the full list of scenarios with parameters and activation examples.
+
+---
+
+## Control API
+
+All control endpoints live under `/rotectl/` and stay responsive even when a simulation is hanging or crashing.
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/rotectl/cmd` | Activate or reset a scenario |
+| `GET` | `/rotectl/status` | Current scenario name and extras |
+| `GET` | `/rotectl/health` | Always 200 — liveness probe |
+
+---
+
+## Local Development
+
+**Prerequisites:** Rust (stable), `just`, `hurl`.
 
 ```sh
-scripts/load-rotelle.sh
-# or equivalently:
-just ship
+just run                         # start server on :8080 (no cluster needed)
+just run-case intermittent-01    # run a single scenario test
+just test-hurl                   # run the full regression suite
 ```
 
-**Step by step** — useful when iterating on the image or manifests:
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the full developer guide, how to add new scenarios, and how to deploy to a local cluster.
 
-```sh
-just docker-build                               # build binary + Docker image
-# load into cluster if required (kind, minikube) — see table above
-kubectl apply -f k8s/rotelle-dev.yaml
-kubectl rollout status deployment/rotelle -n rotelle-dev --timeout=60s
-```
+---
 
-Access the dev deployment:
+## Contributing
 
-```sh
-kubectl port-forward -n rotelle-dev svc/rotelle 8080:8080
-```
+Contributions are welcome — especially new failure scenarios. See [CONTRIBUTING.md](CONTRIBUTING.md) for the 4-step process (implement, register, test, document).
 
-After rebuilding the image, restart the pod to pick it up (kind/minikube only — shared-daemon
-clusters see the new image on the next `kubectl rollout restart`):
+---
 
-```sh
-just restart
-```
+## License
 
-To remove the dev deployment:
-
-```sh
-just undeploy
-```
-
-Curl and/or hurl can be used to add scripts or just targets to help
-access and control the rotelle interface.
-
-# Failure cases
-
-see `docs/rotelle-cases.md`
-
-
-
+Apache License 2.0 — see [LICENSE](LICENSE).
