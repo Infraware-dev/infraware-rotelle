@@ -3,9 +3,6 @@ use std::sync::Mutex;
 
 const CRASH_EVERY: u32 = 5;
 
-/// Simulates intermittent pod crashes: exits on every N-th GET /.
-///
-/// Kubernetes detects the non-zero exit code and restarts the pod.
 pub struct CrashLoopScenario {
     access_count: Mutex<u32>,
 }

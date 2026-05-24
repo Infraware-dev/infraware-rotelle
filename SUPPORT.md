@@ -22,7 +22,7 @@ Use the [Bug Report template](https://github.com/infraware-dev/infraware-rotelle
 
 ## Security Issues
 
-**Do not open public issues for security vulnerabilities.** Contact the maintainers directly instead.
+**Do not open public issues for security vulnerabilities.** See [SECURITY.md](SECURITY.md) for the private reporting process.
 
 ## Common Issues
 

@@ -22,6 +22,8 @@ Rotelle is a lightweight Rust web server that runs inside a Kubernetes cluster a
 
 You need: `kubectl` pointed at any cluster. No cluster yet? Clone the repo and run `./scripts/quickstart.sh` — it creates a Kind cluster, deploys Rotelle, and runs a live demo in under 10 minutes. See [ONBOARDING.md](ONBOARDING.md) for the full walkthrough.
 
+> **Note:** The manifest uses `type: LoadBalancer`. On cloud providers (EKS, GKE, AKS) this provisions a public IP with no authentication. Use a test/staging cluster, or change the Service type to `ClusterIP` and access via `kubectl port-forward`. See [ONBOARDING.md](ONBOARDING.md) for details.
+
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle.yaml
 kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
@@ -77,7 +79,7 @@ All control endpoints live under `/rotectl/` and stay responsive even when a sim
 ```sh
 just run                         # start server on :8080 (no cluster needed)
 just run-case crash-loop         # run a single scenario test
-just test-hurl                   # run the full regression suite
+just test-hurl                   # run the control-path smoke test
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full developer guide, how to add new scenarios, and how to deploy to a local cluster.

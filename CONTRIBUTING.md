@@ -2,7 +2,7 @@
 
 Welcome, and thanks for considering a contribution! Every improvement matters — whether that's a new failure scenario, a bug fix, a documentation correction or a better test.
 
-By participating you agree to abide by the [Code of Conduct](CODE_OF_CONDUCT.md). For security issues, contact the maintainers directly instead of opening a public issue.
+By participating you agree to abide by the [Code of Conduct](CODE_OF_CONDUCT.md). For security issues, see [SECURITY.md](SECURITY.md) instead of opening a public issue.
 
 **Not sure where to start?** Check out [already existing issues](https://github.com/infraware-dev/infraware-rotelle/issues?q=is%3Aissue%20is%3Aopen) in the GitHub repo.
 
@@ -73,8 +73,12 @@ curl http://localhost:8080/rotectl/status
 Keep `just run` running in terminal 1, then in terminal 2:
 
 ```sh
-just test-hurl   # should pass with no errors
+just test-hurl              # control-path smoke test (check.hurl only)
+just run-case crash-loop    # run a single scenario test
+just run-case oom-kill      # etc. — one file per scenario
 ```
+
+`just test-hurl` runs only the control-path smoke test (`check.hurl`). To test a specific scenario, use `just run-case <name>`.
 
 **5. (Optional) Test against a real Kubernetes cluster.**
 

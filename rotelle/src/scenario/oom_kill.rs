@@ -3,7 +3,6 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use tokio::task::AbortHandle;
 
-/// Simulates memory exhaustion: background task leaks memory until OOMKill.
 pub struct OomKillScenario {
     memory_sink: Arc<Mutex<Vec<Vec<u8>>>>,
     leak_task: Mutex<Option<AbortHandle>>,

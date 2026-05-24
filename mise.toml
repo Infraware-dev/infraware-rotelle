@@ -1,3 +1,6 @@
+# Maintainer tooling — not required to build, test, or contribute to Rotelle.
+# colima: macOS container runtime (Docker Desktop alternative used by maintainers)
+# k9s:    terminal-based Kubernetes UI
 [tools]
 colima = "latest"
 k9s = "latest"

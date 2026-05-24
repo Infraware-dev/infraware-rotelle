@@ -99,7 +99,7 @@ A background task wakes every `loop_time_secs` seconds and allocates `loop_amoun
 
 **What it simulates:** A deployment that exits on startup because a required environment variable is absent, causing CrashLoopBackOff.
 
-On first activation a 500 ms-delayed exit is spawned so the HTTP response and state are persisted before the process dies. On every subsequent pod restart (`on_resume`) the check runs immediately — if the variable is still absent, the process exits before the server starts. Adding the variable to the deployment fixes the scenario without a reset.
+Activation stores the required variable name. The crash triggers on the next `GET /` (exits immediately if the variable is absent) or on pod restart via `on_resume` (exits before the server becomes ready). Adding the variable to the deployment fixes the scenario without a reset.
 
 **Parameters:**
 

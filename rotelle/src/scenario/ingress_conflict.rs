@@ -3,9 +3,6 @@ use std::sync::Mutex;
 
 const FAIL_EVERY: u32 = 3;
 
-/// Simulates routing conflicts caused by having both a LoadBalancer Service and an
-/// Ingress controller configured. Returns 502 on every 3rd GET / to reproduce the
-/// intermittent failures an operator would observe in this misconfiguration.
 pub struct IngressConflictScenario {
     request_count: Mutex<u32>,
 }

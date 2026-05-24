@@ -7,7 +7,7 @@ allow = [
 ]
 
 [bans]
-multiple-versions = "warn"
+multiple-versions = "deny"
 deny = []
 
 [advisories]

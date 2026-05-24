@@ -11,7 +11,6 @@ pub struct AppState {
 }
 
 impl AppState {
-    /// Deactivate the current scenario, activate `new`, and persist the change.
     pub fn switch_scenario(
         &self,
         new: Arc<dyn Scenario>,
@@ -60,6 +59,6 @@ pub fn persist_state(path: &str, case: &str, params: &ActivationParams) {
         params: params.clone(),
     };
     if let Ok(json) = serde_json::to_string(&persisted) {
-        let _ = std::fs::write(path, json);
+        let _ = std::fs::write(path, json); // best-effort: a failed write only means state won't survive a restart
     }
 }
