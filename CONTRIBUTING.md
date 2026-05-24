@@ -8,7 +8,7 @@ By participating you agree to abide by the [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ---
 
-## Ways to contributeact push
+## Ways to contribute
 
 | Type | Process |
 |---|---|
