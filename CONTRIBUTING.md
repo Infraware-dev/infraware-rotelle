@@ -4,7 +4,7 @@ Welcome, and thanks for considering a contribution! Every improvement matters �
 
 By participating you agree to abide by the [Code of Conduct](CODE_OF_CONDUCT.md). For security issues, contact the maintainers directly instead of opening a public issue.
 
-**Not sure where to start?** Check out already existing issues in the GitHub repo.
+**Not sure where to start?** Check out [already existing issues](https://github.com/infraware-dev/infraware-rotelle/issues?q=is%3Aissue%20is%3Aopen) in the GitHub repo.
 
 ---
 
@@ -51,7 +51,7 @@ The `upstream` remote lets you pull future changes from the main repo into your 
 **2. Verify the build.**
 
 ```sh
-cd rotelle && cargo build
+cargo build --manifest-path rotelle/Cargo.toml
 ```
 
 **3. Run the server locally.**
@@ -65,7 +65,7 @@ Verify it responds:
 
 ```sh
 curl http://localhost:8080/rotectl/status
-# {"failure_case":"none","params":{}}
+# {"failure_case":"none, idle","description":"No failure active — service responds normally."}
 ```
 
 **4. Run the tests.**
@@ -76,7 +76,17 @@ Keep `just run` running in terminal 1, then in terminal 2:
 just test-hurl   # should pass with no errors
 ```
 
-**5. Create a branch.**
+**5. (Optional) Test against a real Kubernetes cluster.**
+
+`just run` is enough for most scenario development. For scenarios where you need to observe actual pod restarts, OOMKills, or PVC persistence, deploy your local build to a Kind cluster:
+
+```sh
+./scripts/quickstart.sh --build-from-source
+```
+
+This builds the binary from your local source, loads it into a Kind cluster, and deploys to the `rotelle-dev` namespace.
+
+**6. Create a branch.**
 
 Always branch off `main`. Branch names follow the format `<type>/<short-description>`:
 
@@ -101,8 +111,8 @@ Create `rotelle/src/scenario/my_scenario.rs`. Choose a reference file based on c
 | Reference file | Use when |
 |---|---|
 | `idle.rs` or `check.rs` | Stateless — no mutable state, no background tasks |
-| `intermittent_01.rs` | Needs a counter (`std::sync::Mutex`) |
-| `intermittent_02.rs` | Needs a background task (`tokio::spawn` + `AbortHandle`) |
+| `crash_loop.rs` | Needs a counter (`std::sync::Mutex`) |
+| `oom_kill.rs` | Needs a background task (`tokio::spawn` + `AbortHandle`) |
 | `missing_env_var.rs` | Needs `on_resume` override (behavior differs on pod restart) |
 
 Copy the closest reference and adapt it:
@@ -227,9 +237,9 @@ just run-case my-scenario   # your scenario
 just test-hurl              # regression — must still pass
 ```
 
-### Step 4 — Document in rotelle-cases.md
+### Step 4 — Document in scenarios.md
 
-Add an entry to `docs/rotelle-cases.md` under `## Implemented`. Use any existing entry as a template. Include:
+Add an entry to `docs/scenarios.md` under `## Implemented`. Use any existing entry as a template. Include:
 
 - **API case name** and **Source** file path
 - **What it simulates** — one paragraph
@@ -243,6 +253,15 @@ Add an entry to `docs/rotelle-cases.md` under `## Implemented`. Use any existing
 ## Project structure
 
 See [docs/architecture.md](docs/architecture.md) for the full module layout. Read `core/scenario_template.rs` first — it defines the `Scenario` trait contract everything else follows from.
+
+### Scripts
+
+| Script | Purpose |
+|---|---|
+| `scripts/quickstart.sh` | All-in-one: create Kind cluster → build/deploy → demo. The recommended entry point. Use `--build-from-source` to test local changes in k8s. |
+| `scripts/load-rotelle.sh` | Lower-level building block: build binary → Docker image → load into cluster → deploy. Called by `just ship`. |
+| `scripts/setup-kind.sh` | Lower-level building block: create a Kind cluster only. |
+| `scripts/rotectl.sh` | Convenience wrapper for common `/rotectl/cmd` calls. |
 
 ---
 
@@ -342,8 +361,8 @@ The release process (versioning, tagging, publishing to GHCR) is documented in [
 |---|---|---|
 | `idle.rs` | `none, idle` | stateless |
 | `check.rs` | `check` | stateless |
-| `intermittent_01.rs` | `intermittent-01` | counter with `std::sync::Mutex` |
-| `intermittent_02.rs` | `intermittent-02` | background task + `AbortHandle` |
+| `crash_loop.rs` | `crash-loop` | counter with `std::sync::Mutex` |
+| `oom_kill.rs` | `oom-kill` | background task + `AbortHandle` |
 | `missing_env_var.rs` | `missing-env-var` | delayed exit + `on_resume` override |
 | `service_unreachable.rs` | `service-unreachable` | `IndexEffect::Hang` |
 | `ingress_conflict.rs` | `ingress-conflict` | counter + `IndexEffect::RespondWithStatus` |
