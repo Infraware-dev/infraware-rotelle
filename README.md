@@ -10,7 +10,7 @@ Rotelle is a lightweight Rust web server that runs inside a Kubernetes cluster a
 
 ## Features
 
-- **Realistic failure scenarios** — crash-loops, OOMKills, hung connections, missing config, ingress conflicts and more
+- **Realistic failure scenarios** — crash-loop, OOMKill, missing env var (CrashLoopBackOff), hung connections, ingress conflicts and more
 - **Always-responsive control plane** — `/rotectl/` endpoints stay up even when a simulation is hanging or crashing
 - **Survives pod restarts** — active scenario is persisted to disk and resumed automatically
 - **Pluggable architecture** — adding a new scenario is a single Rust file + one registration line
@@ -20,7 +20,7 @@ Rotelle is a lightweight Rust web server that runs inside a Kubernetes cluster a
 
 ## Quick Start
 
-You need: `kubectl` pointed at any cluster.
+You need: `kubectl` pointed at any cluster. No cluster yet? Clone the repo and run `./scripts/quickstart.sh` — it creates a Kind cluster, deploys Rotelle, and runs a live demo in under 10 minutes. See [ONBOARDING.md](ONBOARDING.md) for the full walkthrough.
 
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle.yaml
@@ -33,7 +33,7 @@ Trigger your first failure scenario — a pod crash every 5 requests:
 ```sh
 curl -X POST http://localhost:8080/rotectl/cmd \
   -H 'Content-Type: application/json' \
-  -d '{"cmd": "set", "case": "intermittent-01"}'
+  -d '{"cmd": "set", "case": "crash-loop"}'
 ```
 
 Reset to idle:
@@ -54,7 +54,7 @@ kubectl delete -f https://raw.githubusercontent.com/infraware-dev/infraware-rote
 
 ## Scenarios
 
-See [docs/rotelle-cases.md](docs/rotelle-cases.md) for the full list of scenarios with parameters and activation examples.
+See [docs/scenarios.md](docs/scenarios.md) for the full list of scenarios with parameters and activation examples.
 
 ---
 
@@ -76,7 +76,7 @@ All control endpoints live under `/rotectl/` and stay responsive even when a sim
 
 ```sh
 just run                         # start server on :8080 (no cluster needed)
-just run-case intermittent-01    # run a single scenario test
+just run-case crash-loop         # run a single scenario test
 just test-hurl                   # run the full regression suite
 ```
 

@@ -21,8 +21,8 @@ Rotelle follows [Semantic Versioning](https://semver.org/):
 ```sh
 git checkout main
 git pull upstream main
-cargo test                          # must pass
-just test-hurl                      # must pass (server running in terminal 1)
+cargo test --manifest-path rotelle/Cargo.toml   # must pass
+just test-hurl                                   # must pass (server running in terminal 1)
 ```
 
 **2. Update the version in `rotelle/Cargo.toml`**
@@ -32,7 +32,7 @@ just test-hurl                      # must pass (server running in terminal 1)
 version = "0.2.0"   # ← bump this
 ```
 
-**3. Update `rotelle/CHANGELOG.md`**
+**3. Update `CHANGELOG.md`**
 
 Add an entry for the new version. Follow the existing format:
 
@@ -49,7 +49,7 @@ Add an entry for the new version. Follow the existing format:
 **4. Commit and push the version bump**
 
 ```sh
-git add rotelle/Cargo.toml rotelle/CHANGELOG.md
+git add rotelle/Cargo.toml CHANGELOG.md
 git commit -m "chore: release v0.2.0"
 git push upstream main
 ```

@@ -4,13 +4,13 @@ use std::time::Duration;
 use tokio::task::AbortHandle;
 
 /// Simulates memory exhaustion: background task leaks memory until OOMKill.
-pub struct Intermittent02Scenario {
+pub struct OomKillScenario {
     memory_sink: Arc<Mutex<Vec<Vec<u8>>>>,
     leak_task: Mutex<Option<AbortHandle>>,
     active_params: Mutex<Option<ActivationParams>>,
 }
 
-impl Intermittent02Scenario {
+impl OomKillScenario {
     pub fn new() -> Self {
         Self {
             memory_sink: Arc::new(Mutex::new(Vec::new())),
@@ -20,9 +20,9 @@ impl Intermittent02Scenario {
     }
 }
 
-impl Scenario for Intermittent02Scenario {
+impl Scenario for OomKillScenario {
     fn name(&self) -> &'static str {
-        "intermittent-02"
+        "oom-kill"
     }
 
     fn description(&self) -> &'static str {
@@ -44,7 +44,7 @@ impl Scenario for Intermittent02Scenario {
                 for (i, page) in chunk.chunks_mut(4096).enumerate() {
                     page[0] = noise.wrapping_add(i as u8);
                 }
-                tracing::info!(amount_mb, "intermittent-02: allocated memory chunk");
+                tracing::info!(amount_mb, "oom-kill: allocated memory chunk");
                 sink.lock().unwrap().push(chunk);
             }
         })

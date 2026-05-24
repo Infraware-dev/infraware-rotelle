@@ -10,7 +10,7 @@ use std::collections::HashMap;
 ///
 /// **Wire format** — supply parameters as flat JSON fields alongside `cmd`/`case`:
 /// ```json
-/// {"cmd": "set", "case": "intermittent-02", "loop_time_secs": 10, "loop_amount_mb": 15}
+/// {"cmd": "set", "case": "oom-kill", "loop_time_secs": 10, "loop_amount_mb": 15}
 /// ```
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ActivationParams(HashMap<String, Value>);

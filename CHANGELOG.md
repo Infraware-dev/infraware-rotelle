@@ -13,7 +13,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 - Initial release
 - Pluggable `Scenario` trait with automatic registry wiring
-- Scenarios: `idle`, `check`, `intermittent-01`, `intermittent-02`, `missing-env-var`, `service-unreachable`, `ingress-conflict`
+- Scenarios: `idle`, `check`, `crash-loop`, `oom-kill`, `missing-env-var`, `service-unreachable`, `ingress-conflict`
 - Control API: `POST /rotectl/cmd`, `GET /rotectl/status`, `GET /rotectl/health`
 - State persistence across pod restarts via `/data/state.json`
 - Multi-arch Docker image (amd64 + arm64) published to GHCR

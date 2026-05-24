@@ -21,13 +21,7 @@ src/
 ├── scenario/
 │   ├── mod.rs                 — pub mod declarations + re-exports from core
 │   ├── catalog.rs             — list of all scenario factories  ← add new scenarios here
-│   ├── idle.rs                — "none, idle"
-│   ├── check.rs               — "check"
-│   ├── intermittent_01.rs     — "intermittent-01"
-│   ├── intermittent_02.rs     — "intermittent-02"
-│   ├── missing_env_var.rs     — "missing-env-var"
-│   ├── service_unreachable.rs — "service-unreachable"
-│   └── ingress_conflict.rs    — "ingress-conflict"
+│   └── <name>.rs              — one file per scenario; see docs/scenarios.md for the full list
 └── routes/
     ├── mod.rs
     ├── index.rs               — GET /  → active scenario's on_index_request()
@@ -43,7 +37,7 @@ src/
 
 **Adding a scenario** requires touching three source locations — a new file, one
 line in `catalog.rs`, and one line in `mod.rs` — plus a hurl test and a
-`rotelle-cases.md` entry. Everything else (routing, persistence, status) is
+`scenarios.md` entry. Everything else (routing, persistence, status) is
 wired up automatically.
 
 ### `core/scenario_template.rs` — the full contract
@@ -65,9 +59,9 @@ startup to read `Scenario::name()`; later calls produce fresh instances.
 ### Request flow
 
 ```
-POST /rotectl/cmd  {"cmd":"set","case":"intermittent-02","loop_time_secs":10}
+POST /rotectl/cmd  {"cmd":"set","case":"oom-kill","loop_time_secs":10}
   → cmd.rs         parses extra fields into ActivationParams
-  → registry       create("intermittent-02") → fresh Intermittent02Scenario
+  → registry       create("oom-kill") → fresh OomKillScenario
   → AppState       old.deactivate(); new.activate(&params); persist to disk
 
 GET /
@@ -80,7 +74,7 @@ GET /
 After every scenario switch, `AppState` writes to `/data/state.json`:
 
 ```json
-{"failure_case": "intermittent-02", "params": {"loop_time_secs": 10, "loop_amount_mb": 15}}
+{"failure_case": "oom-kill", "params": {"loop_time_secs": 10, "loop_amount_mb": 15}}
 ```
 
 On pod restart, `load_state` reads the file, the registry recreates the
@@ -93,4 +87,4 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md). Short version:
 1. Implement `Scenario` in `src/scenario/<name>.rs`.
 2. Add `Box::new(|| Arc::new(MyScenario::new()))` to `catalog::all()`.
 3. Expose the module in `mod.rs`.
-4. Write a hurl test and a `docs/rotelle-cases.md` entry.
+4. Write a hurl test and a `docs/scenarios.md` entry.

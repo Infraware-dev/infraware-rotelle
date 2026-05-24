@@ -5,8 +5,7 @@
 Start here before opening an issue:
 
 - **[README.md](README.md)** — Quick start, scenario overview, control API reference
-- **[docs/rotelle-cases.md](docs/rotelle-cases.md)** — Full parameter docs for every scenario
-- **[docs/external-tester-guide.md](docs/external-tester-guide.md)** — Step-by-step walkthrough for first-time testers
+- **[docs/scenarios.md](docs/scenarios.md)** — Full parameter docs for every scenario
 - **[docs/architecture.md](docs/architecture.md)** — Internal module layout and request flow
 - **[CONTRIBUTING.md](CONTRIBUTING.md)** — Development setup and how to add scenarios
 
@@ -15,8 +14,7 @@ Start here before opening an issue:
 If the documentation doesn't answer your question:
 
 1. **Search existing issues** — someone may have already asked: [github.com/infraware-dev/infraware-rotelle/issues](https://github.com/infraware-dev/infraware-rotelle/issues)
-2. **Open a new issue** using the [Bug Report](https://github.com/infraware-dev/infraware-rotelle/issues/new?template=bug_report.yml) or [Feature Request](https://github.com/infraware-dev/infraware-rotelle/issues/new?template=feature_request.yml) template.
-3. **Open a new issue** if your question doesn't fit the existing templates — the maintainers monitor all issues.
+2. **Open an issue** — use the [Bug Report](https://github.com/infraware-dev/infraware-rotelle/issues/new?template=bug_report.yml) or [Feature Request](https://github.com/infraware-dev/infraware-rotelle/issues/new?template=feature_request.yml) template, or open a blank issue if neither fits. Maintainers monitor all issues.
 
 ## Reporting a Bug
 
@@ -31,7 +29,7 @@ Use the [Bug Report template](https://github.com/infraware-dev/infraware-rotelle
 **Port-forward drops after a pod restart**
 Expected — the port-forward is tied to the pod. Restart it: `kubectl port-forward -n rotelle svc/rotelle 8080:8080`
 
-**`intermittent-02` never OOMKills**
+**`oom-kill` never OOMKills**
 Check that memory limits are applied: `kubectl describe pod -n rotelle <pod> | grep -A5 Limits`
 
 **`cargo build` fails with target not found**

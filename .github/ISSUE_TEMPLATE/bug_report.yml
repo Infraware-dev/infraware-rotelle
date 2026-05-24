@@ -28,7 +28,7 @@ body:
     id: scenario
     attributes:
       label: Scenario name (if applicable)
-      description: "e.g. intermittent-01, missing-env-var"
+      description: "e.g. crash-loop, missing-env-var"
       placeholder: "none"
 
   - type: textarea
@@ -36,7 +36,7 @@ body:
     attributes:
       label: What happened?
       description: A clear description of the bug.
-      placeholder: "When I activate intermittent-02 with loop_amount_mb=15, the pod does not restart after memory is exhausted..."
+      placeholder: "When I activate oom-kill with loop_amount_mb=15, the pod does not restart after memory is exhausted..."
     validations:
       required: true
 
@@ -55,7 +55,7 @@ body:
       description: Exact commands you ran.
       placeholder: |
         1. `kubectl apply -f k8s/rotelle.yaml`
-        2. `curl -X POST ... -d '{"cmd":"set","case":"intermittent-02","loop_time_secs":10,"loop_amount_mb":15}'`
+        2. `curl -X POST ... -d '{"cmd":"set","case":"oom-kill","loop_time_secs":10,"loop_amount_mb":15}'`
         3. `kubectl get pods -n rotelle -w`
         4. (observed: pod never restarts)
     validations:
