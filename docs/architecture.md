@@ -13,6 +13,7 @@ an HTTP server (via [Poem](https://github.com/poem-web/poem)) with two surfaces:
 ```
 src/
 ├── main.rs                    — startup: build registry, load state, start server
+├── catalog.rs                 — list of all scenario factories  ← add new scenarios here
 ├── state.rs                   — AppState, load/persist state to disk
 ├── core/
 │   ├── mod.rs                 — module index + re-exports
@@ -20,25 +21,23 @@ src/
 │   └── registry.rs            — ScenarioRegistry (name → factory lookup)
 ├── scenario/
 │   ├── mod.rs                 — pub mod declarations + re-exports from core
-│   ├── catalog.rs             — list of all scenario factories  ← add new scenarios here
 │   └── <name>.rs              — one file per scenario; see docs/scenarios.md for the full list
 └── routes/
     ├── mod.rs
     ├── index.rs               — GET /  → active scenario's on_index_request()
-    ├── health.rs              — GET /health
+    ├── health.rs              — GET /health and GET /rotectl/health
     ├── logo.rs                — GET /logo.png, GET /favicon.png — compiled-in static assets
     └── rotectl/
         ├── cmd.rs             — POST /rotectl/cmd — activates via registry
-        ├── status.rs          — GET /rotectl/status
-        └── health.rs          — GET /rotectl/health
+        └── status.rs          — GET /rotectl/status
 ```
 
 ## How it works
 
-**Adding a scenario** requires touching three source locations — a new file, one
-line in `catalog.rs`, and one line in `mod.rs` — plus a hurl test and a
-`scenarios.md` entry. Everything else (routing, persistence, status) is
-wired up automatically.
+**Adding a scenario** requires touching three source locations — a new file in
+`scenario/`, one line in `catalog.rs`, and one line in `scenario/mod.rs` — plus
+a hurl test and a `scenarios.md` entry. Everything else (routing, persistence,
+status) is wired up automatically.
 
 ### `core/scenario_template.rs` — the full contract
 
@@ -51,7 +50,7 @@ One file defines everything a scenario works with:
 - `IndexEffect` — what `on_index_request` returns: `Respond(html)`, `Exit(code)`, `Hang` (hold connection open), or `RespondWithStatus(status, html)`.
 - `page_html(scenario, description, body)` — helper that renders the standard index page; `description` comes from `Scenario::description()` and is shown below the scenario name.
 
-### `catalog.rs` — the scenario list
+### `catalog.rs` — the scenario registry
 
 A single `Vec` of factory closures. The registry calls each factory once at
 startup to read `Scenario::name()`; later calls produce fresh instances.

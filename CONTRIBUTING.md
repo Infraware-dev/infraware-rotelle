@@ -186,7 +186,7 @@ fn status_extras(&self) -> serde_json::Value {
 
 ### Step 2 — Register in the catalog
 
-In `rotelle/src/scenario/catalog.rs`, add one line:
+In `rotelle/src/catalog.rs`, add one line:
 
 ```rust
 Box::new(|| Arc::new(MyScenario::new())),

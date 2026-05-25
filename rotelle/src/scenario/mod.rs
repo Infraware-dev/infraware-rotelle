@@ -1,4 +1,3 @@
-pub mod catalog;
 pub mod check;
 pub mod idle;
 pub mod ingress_conflict;

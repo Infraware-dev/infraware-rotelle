@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use super::check::Check;
-use super::idle::Idle;
-use super::ingress_conflict::IngressConflictScenario;
-use super::crash_loop::CrashLoopScenario;
-use super::oom_kill::OomKillScenario;
-use super::missing_env_var::MissingEnvVarScenario;
-use super::service_unreachable::ServiceUnreachableScenario;
 use crate::core::registry::Factory;
+use crate::scenario::check::Check;
+use crate::scenario::crash_loop::CrashLoopScenario;
+use crate::scenario::idle::Idle;
+use crate::scenario::ingress_conflict::IngressConflictScenario;
+use crate::scenario::missing_env_var::MissingEnvVarScenario;
+use crate::scenario::oom_kill::OomKillScenario;
+use crate::scenario::service_unreachable::ServiceUnreachableScenario;
 
 /// All built-in failure scenarios.
 ///

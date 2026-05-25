@@ -11,7 +11,7 @@ pub fn routes() -> Route {
         .at("/logo.png", get(logo::logo))
         .at("/favicon.png", get(logo::favicon))
         .at("/health", get(health::health))
-        .at("/rotectl/health", get(rotectl::health::health))
+        .at("/rotectl/health", get(health::health))
         .at("/rotectl/status", get(rotectl::status::status))
         .at("/rotectl/cmd", post(rotectl::cmd::cmd))
 }
