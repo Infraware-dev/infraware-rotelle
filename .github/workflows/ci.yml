@@ -126,11 +126,11 @@ jobs:
           hurl \
             --test \
             --variable rotelle_service_host=http://127.0.0.1:8080 \
-            tests/hurl-case/check.hurl
+            tests/hurl-scenario/check.hurl
 
       - name: Run scenario smoke tests
         run: |
-          for f in tests/hurl-case/*.hurl; do
+          for f in tests/hurl-scenario/*.hurl; do
             [ "$(basename $f)" = "check.hurl" ] && continue
             echo "--- $(basename $f) ---"
             hurl \

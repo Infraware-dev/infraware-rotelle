@@ -5,26 +5,26 @@
 # To observe the hang manually: curl --max-time 5 <host>/
 #
 # Usage:
-#   hurl --variable rotelle_service_host=<URL> tests/hurl-case/service-unreachable.hurl
-#   just run-case service-unreachable
+#   hurl --variable rotelle_service_host=<URL> tests/hurl-scenario/service-unreachable.hurl
+#   just run-scenario service-unreachable
 
 # ── activate ──────────────────────────────────────────────────────────────────
 
 POST {{rotelle_service_host}}/rotectl/cmd
 Content-Type: application/json
-{"cmd": "set", "case": "service-unreachable"}
+{"cmd": "set", "scenario": "service-unreachable"}
 
 HTTP 200
 [Asserts]
 jsonpath "$.ok" == true
-jsonpath "$.failure_case" == "service-unreachable"
+jsonpath "$.scenario" == "service-unreachable"
 
 # ── status reachable while GET / hangs ────────────────────────────────────────
 
 GET {{rotelle_service_host}}/rotectl/status
 HTTP 200
 [Asserts]
-jsonpath "$.failure_case" == "service-unreachable"
+jsonpath "$.scenario" == "service-unreachable"
 jsonpath "$.description" exists
 
 # ── reset restores normal behaviour ──────────────────────────────────────────
@@ -36,7 +36,7 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.ok" == true
-jsonpath "$.failure_case" == "none, idle"
+jsonpath "$.scenario" == "none, idle"
 
 GET {{rotelle_service_host}}/
 HTTP 200

@@ -35,7 +35,7 @@ Trigger your first failure scenario — a pod crash every 5 requests:
 ```sh
 curl -X POST http://localhost:8080/rotectl/cmd \
   -H 'Content-Type: application/json' \
-  -d '{"cmd": "set", "case": "crash-loop"}'
+  -d '{"cmd": "set", "scenario": "crash-loop"}'
 ```
 
 Reset to idle:
@@ -78,7 +78,7 @@ All control endpoints live under `/rotectl/` and stay responsive even when a sim
 
 ```sh
 just run                         # start server on :8080 (no cluster needed)
-just run-case crash-loop         # run a single scenario test
+just run-scenario crash-loop         # run a single scenario test
 just test-hurl                   # run the control-path smoke test
 ```
 

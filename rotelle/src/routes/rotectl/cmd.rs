@@ -15,7 +15,7 @@ use tracing::info;
 #[derive(Deserialize)]
 struct Cmd {
     cmd: String,
-    case: Option<String>,
+    scenario: Option<String>,
     /// All remaining JSON fields are collected as activation parameters.
     /// Scenarios read only the keys they recognise; unknown keys are ignored.
     #[serde(flatten)]
@@ -28,38 +28,38 @@ pub fn cmd(state: Data<&AppState>, Json(body): Json<Cmd>) -> (StatusCode, Json<s
 
     match body.cmd.as_str() {
         "set" => {
-            let case = body.case.as_deref().unwrap_or("none, idle");
-            match state.registry.create(case) {
+            let scenario = body.scenario.as_deref().unwrap_or("none, idle");
+            match state.registry.create(scenario) {
                 None => (
                     StatusCode::BAD_REQUEST,
                     Json(
-                        serde_json::json!({"ok": false, "error": format!("unknown case: {case}")}),
+                        serde_json::json!({"ok": false, "error": format!("unknown scenario: {scenario}")}),
                     ),
                 ),
-                Some(scenario) => {
-                    let name = state.switch_scenario(scenario, params);
-                    info!(failure_case = name, "failure case set");
+                Some(s) => {
+                    let name = state.switch_scenario(s, params);
+                    info!(scenario = name, "scenario set");
                     (
                         StatusCode::OK,
-                        Json(serde_json::json!({"ok": true, "failure_case": name})),
+                        Json(serde_json::json!({"ok": true, "scenario": name})),
                     )
                 }
             }
         }
         "reset" => {
             let name = state.switch_scenario(Arc::new(Idle::new()), ActivationParams::default());
-            info!(failure_case = name, "failure case reset");
+            info!(scenario = name, "scenario reset");
             (
                 StatusCode::OK,
-                Json(serde_json::json!({"ok": true, "failure_case": name})),
+                Json(serde_json::json!({"ok": true, "scenario": name})),
             )
         }
         "check" => {
             let name = state.switch_scenario(Arc::new(Check::new()), ActivationParams::default());
-            info!(failure_case = name, "failure case set");
+            info!(scenario = name, "scenario set");
             (
                 StatusCode::OK,
-                Json(serde_json::json!({"ok": true, "failure_case": name})),
+                Json(serde_json::json!({"ok": true, "scenario": name})),
             )
         }
         unknown => (

@@ -65,7 +65,7 @@ Verify it responds:
 
 ```sh
 curl http://localhost:8080/rotectl/status
-# {"failure_case":"none, idle","description":"No failure active — service responds normally."}
+# {"scenario":"none, idle","description":"No failure active — service responds normally."}
 ```
 
 **4. Run the tests.**
@@ -74,11 +74,11 @@ Keep `just run` running in terminal 1, then in terminal 2:
 
 ```sh
 just test-hurl              # control-path smoke test (check.hurl only)
-just run-case crash-loop    # run a single scenario test
-just run-case oom-kill      # etc. — one file per scenario
+just run-scenario crash-loop    # run a single scenario test
+just run-scenario oom-kill      # etc. — one file per scenario
 ```
 
-`just test-hurl` runs only the control-path smoke test (`check.hurl`). To test a specific scenario, use `just run-case <name>`.
+`just test-hurl` runs only the control-path smoke test (`check.hurl`). To test a specific scenario, use `just run-scenario <name>`.
 
 **5. (Optional) Test against a real Kubernetes cluster.**
 
@@ -153,7 +153,7 @@ impl Scenario for MyScenario {
 **Reading activation parameters** — extra JSON fields from the API request:
 
 ```json
-{"cmd": "set", "case": "my-scenario", "my_value": 42}
+{"cmd": "set", "scenario": "my-scenario", "my_value": 42}
 ```
 
 ```rust
@@ -200,22 +200,22 @@ pub mod my_scenario;
 
 ### Step 3 — Write a hurl test
 
-Create `tests/hurl-case/my-scenario.hurl`:
+Create `tests/hurl-scenario/my-scenario.hurl`:
 
 ```hurl
 POST {{rotelle_service_host}}/rotectl/cmd
 Content-Type: application/json
-{"cmd": "set", "case": "my-scenario"}
+{"cmd": "set", "scenario": "my-scenario"}
 
 HTTP 200
 [Asserts]
 jsonpath "$.ok" == true
-jsonpath "$.failure_case" == "my-scenario"
+jsonpath "$.scenario" == "my-scenario"
 
 GET {{rotelle_service_host}}/rotectl/status
 HTTP 200
 [Asserts]
-jsonpath "$.failure_case" == "my-scenario"
+jsonpath "$.scenario" == "my-scenario"
 
 GET {{rotelle_service_host}}/
 HTTP 200
@@ -229,7 +229,7 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.ok" == true
-jsonpath "$.failure_case" == "none, idle"
+jsonpath "$.scenario" == "none, idle"
 ```
 
 The only variable passed automatically is `rotelle_service_host`. Any other variables your test needs must be hardcoded directly in the hurl file — CI runs all hurl files automatically and passes no extra variables.
@@ -237,7 +237,7 @@ The only variable passed automatically is `rotelle_service_host`. Any other vari
 Run it locally (keep `just run` open in terminal 1):
 
 ```sh
-just run-case my-scenario   # your scenario
+just run-scenario my-scenario   # your scenario
 just test-hurl              # regression — must still pass
 ```
 
@@ -245,7 +245,7 @@ just test-hurl              # regression — must still pass
 
 Add an entry to `docs/scenarios.md` under `## Implemented`. Use any existing entry as a template. Include:
 
-- **API case name** and **Source** file path
+- **API scenario name** and **Source** file path
 - **What it simulates** — one paragraph
 - **Parameters** table (or "none")
 - **Activation example** — a JSON snippet
@@ -324,7 +324,7 @@ cargo test --manifest-path rotelle/Cargo.toml
 # integration tests — terminal 1: start server, terminal 2: run tests
 just run
 just test-hurl
-just run-case <your-scenario>
+just run-scenario <your-scenario>
 ```
 
 Then:

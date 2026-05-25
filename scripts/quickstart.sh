@@ -255,11 +255,11 @@ run_demo() {
   hr
   echo "  \$ curl -X POST http://localhost:${PORT}/rotectl/cmd \\"
   echo "      -H 'Content-Type: application/json' \\"
-  echo "      -d '{\"cmd\": \"set\", \"case\": \"crash-loop\"}'"
+  echo "      -d '{\"cmd\": \"set\", \"scenario\": \"crash-loop\"}'"
   echo ""
   curl -sf -X POST "http://localhost:${PORT}/rotectl/cmd" \
     -H 'Content-Type: application/json' \
-    -d '{"cmd": "set", "case": "crash-loop"}' && echo
+    -d '{"cmd": "set", "scenario": "crash-loop"}' && echo
   echo ""
 
   hr

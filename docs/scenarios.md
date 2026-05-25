@@ -28,7 +28,7 @@ Default state. The service responds normally to all requests. This is the target
 
 **Source:** `rotelle/src/scenario/check.rs`
 
-Control checkpoint. Marks a known, stable state for test sequences to assert against. Activated by the `check` command or `{"cmd": "set", "case": "check"}`.
+Control checkpoint. Marks a known, stable state for test sequences to assert against. Activated by the `check` command or `{"cmd": "set", "scenario": "check"}`.
 
 ---
 
@@ -44,7 +44,7 @@ The process calls `exit(1)` on every 5th `GET /`. Kubernetes detects the non-zer
 
 **Activate:**
 ```json
-{ "cmd": "set", "case": "crash-loop" }
+{ "cmd": "set", "scenario": "crash-loop" }
 ```
 
 **`/rotectl/status` extras:**
@@ -54,7 +54,7 @@ The process calls `exit(1)` on every 5th `GET /`. Kubernetes detects the non-zer
 
 **Diagnosis value:** Identifies whether a failure is caused by the pod process itself (predictable crash cycle) versus infrastructure or configuration.
 
-**Hurl test:** `tests/hurl-case/crash-loop.hurl`
+**Hurl test:** `tests/hurl-scenario/crash-loop.hurl`
 
 ---
 
@@ -75,7 +75,7 @@ A background task wakes every `loop_time_secs` seconds and allocates `loop_amoun
 
 **Activate** (OOMKill a 64 Mi pod in ~30–40 s):
 ```json
-{ "cmd": "set", "case": "oom-kill", "loop_time_secs": 10, "loop_amount_mb": 15 }
+{ "cmd": "set", "scenario": "oom-kill", "loop_time_secs": 10, "loop_amount_mb": 15 }
 ```
 
 **`/rotectl/status` extras:**
@@ -89,7 +89,7 @@ A background task wakes every `loop_time_secs` seconds and allocates `loop_amoun
 
 **Note:** Requires a memory limit to be enforced. The default manifest sets `limits.memory: 64Mi`. If your cluster's admission controller overrides this, the OOMKill will not trigger — verify with `kubectl describe pod -n rotelle <pod> | grep -A5 Limits`.
 
-**Hurl test:** `tests/hurl-case/oom-kill.hurl`
+**Hurl test:** `tests/hurl-scenario/oom-kill.hurl`
 
 ---
 
@@ -109,7 +109,7 @@ Activation stores the required variable name. The crash triggers on the next `GE
 
 **Activate:**
 ```json
-{ "cmd": "set", "case": "missing-env-var", "required_var": "DATABASE_URL" }
+{ "cmd": "set", "scenario": "missing-env-var", "required_var": "DATABASE_URL" }
 ```
 
 **`/rotectl/status` extras:**
@@ -121,7 +121,7 @@ Activation stores the required variable name. The crash triggers on the next `GE
 
 **Note:** After reset, the pod may still be in crash-loop if it restarted while the scenario was active. Force a clean restart: `kubectl rollout restart deployment/rotelle -n rotelle`.
 
-**Hurl test:** `tests/hurl-case/missing-env-var.hurl`
+**Hurl test:** `tests/hurl-scenario/missing-env-var.hurl`
 
 ---
 
@@ -137,12 +137,12 @@ Every `GET /` hangs the connection indefinitely (the async task sleeps; the thre
 
 **Activate:**
 ```json
-{ "cmd": "set", "case": "service-unreachable" }
+{ "cmd": "set", "scenario": "service-unreachable" }
 ```
 
 **Diagnosis value:** Isolates traffic-routing failures from application failures. When `GET /` times out but `/rotectl/status` succeeds, the pod is alive but unreachable via the Service — pointing to a selector or label mismatch.
 
-**Hurl test:** `tests/hurl-case/service-unreachable.hurl`
+**Hurl test:** `tests/hurl-scenario/service-unreachable.hurl`
 
 ---
 
@@ -158,7 +158,7 @@ Returns HTTP 502 on every 3rd `GET /`; other requests return 200. The counter re
 
 **Activate:**
 ```json
-{ "cmd": "set", "case": "ingress-conflict" }
+{ "cmd": "set", "scenario": "ingress-conflict" }
 ```
 
 **`/rotectl/status` extras:**
@@ -168,7 +168,7 @@ Returns HTTP 502 on every 3rd `GET /`; other requests return 200. The counter re
 
 **Diagnosis value:** Reproduces the intermittent 502 errors that appear when both a LoadBalancer Service and an Ingress rule compete to route traffic to the same workload.
 
-**Hurl test:** `tests/hurl-case/ingress-conflict.hurl`
+**Hurl test:** `tests/hurl-scenario/ingress-conflict.hurl`
 
 ---
 

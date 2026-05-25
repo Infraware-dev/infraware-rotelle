@@ -4,24 +4,24 @@
 # returns 502, then the cycle repeats. Counter resets on activation.
 #
 # Usage:
-#   hurl --variable rotelle_service_host=<URL> tests/hurl-case/ingress-conflict.hurl
-#   just run-case ingress-conflict
+#   hurl --variable rotelle_service_host=<URL> tests/hurl-scenario/ingress-conflict.hurl
+#   just run-scenario ingress-conflict
 
 # ── activate ──────────────────────────────────────────────────────────────────
 
 POST {{rotelle_service_host}}/rotectl/cmd
 Content-Type: application/json
-{"cmd": "set", "case": "ingress-conflict"}
+{"cmd": "set", "scenario": "ingress-conflict"}
 
 HTTP 200
 [Asserts]
 jsonpath "$.ok" == true
-jsonpath "$.failure_case" == "ingress-conflict"
+jsonpath "$.scenario" == "ingress-conflict"
 
 GET {{rotelle_service_host}}/rotectl/status
 HTTP 200
 [Asserts]
-jsonpath "$.failure_case" == "ingress-conflict"
+jsonpath "$.scenario" == "ingress-conflict"
 jsonpath "$.fail_every" == 3
 
 # ── alternating 200 / 502 pattern ────────────────────────────────────────────
@@ -59,4 +59,4 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.ok" == true
-jsonpath "$.failure_case" == "none, idle"
+jsonpath "$.scenario" == "none, idle"

@@ -49,7 +49,7 @@ One file defines everything a scenario works with:
 - `Scenario` trait — five required methods (`name`, `description`, `activate`,
   `deactivate`, `on_index_request`) plus two optional ones with defaults.
 - `IndexEffect` — what `on_index_request` returns: `Respond(html)`, `Exit(code)`, `Hang` (hold connection open), or `RespondWithStatus(status, html)`.
-- `page_html(case, description, body)` — helper that renders the standard index page; `description` comes from `Scenario::description()` and is shown below the case name.
+- `page_html(scenario, description, body)` — helper that renders the standard index page; `description` comes from `Scenario::description()` and is shown below the scenario name.
 
 ### `catalog.rs` — the scenario list
 
@@ -59,7 +59,7 @@ startup to read `Scenario::name()`; later calls produce fresh instances.
 ### Request flow
 
 ```
-POST /rotectl/cmd  {"cmd":"set","case":"oom-kill","loop_time_secs":10}
+POST /rotectl/cmd  {"cmd":"set","scenario":"oom-kill","loop_time_secs":10}
   → cmd.rs         parses extra fields into ActivationParams
   → registry       create("oom-kill") → fresh OomKillScenario
   → AppState       old.deactivate(); new.activate(&params); persist to disk
@@ -74,7 +74,7 @@ GET /
 After every scenario switch, `AppState` writes to `/data/state.json`:
 
 ```json
-{"failure_case": "oom-kill", "params": {"loop_time_secs": 10, "loop_amount_mb": 15}}
+{"scenario": "oom-kill", "params": {"loop_time_secs": 10, "loop_amount_mb": 15}}
 ```
 
 On pod restart, `load_state` reads the file, the registry recreates the
@@ -82,9 +82,4 @@ scenario, and `on_resume` restarts any background tasks.
 
 ## Adding a new scenario
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md). Short version:
-
-1. Implement `Scenario` in `src/scenario/<name>.rs`.
-2. Add `Box::new(|| Arc::new(MyScenario::new()))` to `catalog::all()`.
-3. Expose the module in `mod.rs`.
-4. Write a hurl test and a `docs/scenarios.md` entry.
+See [CONTRIBUTING.md](../CONTRIBUTING.md).

@@ -81,10 +81,10 @@ The script:
 
 ```sh
 curl http://localhost:8080/rotectl/status
-# {"failure_case":"none, idle","description":"No failure active — service responds normally."}
+# {"scenario":"none, idle","description":"No failure active — service responds normally."}
 ```
 
-`failure_case: "none, idle"` means Rotelle is idle and healthy — ready to simulate failures.
+`scenario: "none, idle"` means Rotelle is idle and healthy — ready to simulate failures.
 
 ---
 
@@ -99,7 +99,7 @@ curl http://localhost:8080/rotectl/status
 ```sh
 curl -X POST http://localhost:8080/rotectl/cmd \
   -H 'Content-Type: application/json' \
-  -d '{"cmd": "set", "case": "crash-loop"}'
+  -d '{"cmd": "set", "scenario": "crash-loop"}'
 ```
 
 **Observe — open two terminals:**
@@ -122,7 +122,7 @@ After the 5th request you will see the pod restart and `RESTARTS` increment in T
 
 ```sh
 curl http://localhost:8080/rotectl/status
-# {"failure_case":"crash-loop","description":"...","access_count":3,"crash_every":5}
+# {"scenario":"crash-loop","description":"...","access_count":3,"crash_every":5}
 ```
 
 The control API (`/rotectl/*`) always responds — even while the application is crashing.

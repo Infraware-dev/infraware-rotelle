@@ -5,33 +5,33 @@
 # this test with that variable unset to observe the actual exit.
 #
 # Usage:
-#   hurl --variable rotelle_service_host=<URL> tests/hurl-case/missing-env-var.hurl
-#   just run-case missing-env-var
+#   hurl --variable rotelle_service_host=<URL> tests/hurl-scenario/missing-env-var.hurl
+#   just run-scenario missing-env-var
 
 # ── activate ──────────────────────────────────────────────────────────────────
 
 POST {{rotelle_service_host}}/rotectl/cmd
 Content-Type: application/json
-{"cmd": "set", "case": "missing-env-var"}
+{"cmd": "set", "scenario": "missing-env-var"}
 
 HTTP 200
 [Asserts]
 jsonpath "$.ok" == true
-jsonpath "$.failure_case" == "missing-env-var"
+jsonpath "$.scenario" == "missing-env-var"
 
 # ── status reflects the required var ─────────────────────────────────────────
 
 GET {{rotelle_service_host}}/rotectl/status
 HTTP 200
 [Asserts]
-jsonpath "$.failure_case" == "missing-env-var"
+jsonpath "$.scenario" == "missing-env-var"
 jsonpath "$.required_var" == "REQUIRED_APP_SECRET"
 
 # ── activate with a custom var name ──────────────────────────────────────────
 
 POST {{rotelle_service_host}}/rotectl/cmd
 Content-Type: application/json
-{"cmd": "set", "case": "missing-env-var", "required_var": "DATABASE_URL"}
+{"cmd": "set", "scenario": "missing-env-var", "required_var": "DATABASE_URL"}
 
 HTTP 200
 [Asserts]
@@ -51,4 +51,4 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.ok" == true
-jsonpath "$.failure_case" == "none, idle"
+jsonpath "$.scenario" == "none, idle"

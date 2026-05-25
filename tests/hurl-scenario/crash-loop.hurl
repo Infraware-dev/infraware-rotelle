@@ -5,24 +5,24 @@
 # is active without actually crashing the local server during tests.
 #
 # Usage:
-#   hurl --variable rotelle_service_host=<URL> tests/hurl-case/crash-loop.hurl
-#   just run-case crash-loop
+#   hurl --variable rotelle_service_host=<URL> tests/hurl-scenario/crash-loop.hurl
+#   just run-scenario crash-loop
 
 # ── activate crash-loop ───────────────────────────────────────────────────────
 
 POST {{rotelle_service_host}}/rotectl/cmd
 Content-Type: application/json
-{"cmd": "set", "case": "crash-loop"}
+{"cmd": "set", "scenario": "crash-loop"}
 
 HTTP 200
 [Asserts]
 jsonpath "$.ok" == true
-jsonpath "$.failure_case" == "crash-loop"
+jsonpath "$.scenario" == "crash-loop"
 
 GET {{rotelle_service_host}}/rotectl/status
 HTTP 200
 [Asserts]
-jsonpath "$.failure_case" == "crash-loop"
+jsonpath "$.scenario" == "crash-loop"
 
 # ── verify service responds (n_accesses succeed; next crash triggers exit) ───
 

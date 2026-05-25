@@ -55,7 +55,7 @@ body:
       description: Exact commands you ran.
       placeholder: |
         1. `kubectl apply -f k8s/rotelle.yaml`
-        2. `curl -X POST ... -d '{"cmd":"set","case":"oom-kill","loop_time_secs":10,"loop_amount_mb":15}'`
+        2. `curl -X POST ... -d '{"cmd":"set","scenario":"oom-kill","loop_time_secs":10,"loop_amount_mb":15}'`
         3. `kubectl get pods -n rotelle -w`
         4. (observed: pod never restarts)
     validations:

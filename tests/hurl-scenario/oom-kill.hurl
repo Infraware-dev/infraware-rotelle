@@ -5,24 +5,24 @@
 # the limit after roughly 3-4 allocation cycles (~30-40 s).
 #
 # Usage:
-#   hurl --variable rotelle_service_host=<URL> tests/hurl-case/oom-kill.hurl
-#   just run-case oom-kill
+#   hurl --variable rotelle_service_host=<URL> tests/hurl-scenario/oom-kill.hurl
+#   just run-scenario oom-kill
 
 # ── activate oom-kill ─────────────────────────────────────────────────────────
 
 POST {{rotelle_service_host}}/rotectl/cmd
 Content-Type: application/json
-{"cmd": "set", "case": "oom-kill", "loop_time_secs": 10, "loop_amount_mb": 15}
+{"cmd": "set", "scenario": "oom-kill", "loop_time_secs": 10, "loop_amount_mb": 15}
 
 HTTP 200
 [Asserts]
 jsonpath "$.ok" == true
-jsonpath "$.failure_case" == "oom-kill"
+jsonpath "$.scenario" == "oom-kill"
 
 GET {{rotelle_service_host}}/rotectl/status
 HTTP 200
 [Asserts]
-jsonpath "$.failure_case" == "oom-kill"
+jsonpath "$.scenario" == "oom-kill"
 
 # ── verify service is responding before leak takes hold ───────────────────────
 

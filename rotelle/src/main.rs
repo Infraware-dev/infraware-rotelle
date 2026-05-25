@@ -25,11 +25,11 @@ async fn main() -> Result<(), std::io::Error> {
     let state_file = format!("{data_dir}/state.json");
     let registry = ScenarioRegistry::from_catalog(catalog::all());
 
-    let (case, params) = load_state(&state_file);
-    info!(data_dir, failure_case = %case, "rotelle starting");
+    let (scenario, params) = load_state(&state_file);
+    info!(data_dir, scenario = %scenario, "rotelle starting");
 
     let initial = registry
-        .create(&case)
+        .create(&scenario)
         .unwrap_or_else(|| Arc::new(Idle::new()));
 
     initial.on_resume(&params);

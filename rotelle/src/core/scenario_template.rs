@@ -8,9 +8,9 @@ use std::collections::HashMap;
 /// Backed by a JSON object so any scenario can accept any parameters without
 /// changing this type. Read values with the typed helpers; unknown keys are ignored.
 ///
-/// **Wire format** — supply parameters as flat JSON fields alongside `cmd`/`case`:
+/// **Wire format** — supply parameters as flat JSON fields alongside `cmd`/`scenario`:
 /// ```json
-/// {"cmd": "set", "case": "oom-kill", "loop_time_secs": 10, "loop_amount_mb": 15}
+/// {"cmd": "set", "scenario": "oom-kill", "loop_time_secs": 10, "loop_amount_mb": 15}
 /// ```
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 pub struct ActivationParams(HashMap<String, Value>);
@@ -50,7 +50,7 @@ impl From<HashMap<String, Value>> for ActivationParams {
 /// **To add a new scenario:** implement this trait in a new file, then add one
 /// line to `catalog.rs`. See `CONTRIBUTING.md` for the full walkthrough.
 pub trait Scenario: Send + Sync {
-    /// API identifier — the value callers pass in the `case` field.
+    /// API identifier — the value callers pass in the `scenario` field.
     fn name(&self) -> &'static str;
 
     /// Short description shown in `/rotectl/status`.
@@ -93,7 +93,7 @@ pub enum IndexEffect {
 
 // ── HTML helper ───────────────────────────────────────────────────────────────
 
-pub fn page_html(case: &str, description: &str, body: &str) -> String {
+pub fn page_html(scenario: &str, description: &str, body: &str) -> String {
     format!(
         r##"<!DOCTYPE html>
 <html lang="en">
@@ -203,7 +203,7 @@ pub fn page_html(case: &str, description: &str, body: &str) -> String {
       margin-bottom: 0.65rem;
     }}
 
-    .case-name {{
+    .scenario-name {{
       font-size: 1.85rem;
       font-weight: 700;
       letter-spacing: -0.02em;
@@ -213,7 +213,7 @@ pub fn page_html(case: &str, description: &str, body: &str) -> String {
       margin-bottom: 0.6rem;
     }}
 
-    .case-description {{
+    .scenario-description {{
       font-size: 1rem;
       color: #6868a0;
       line-height: 1.5;
@@ -279,9 +279,9 @@ pub fn page_html(case: &str, description: &str, body: &str) -> String {
         </div>
       </div>
       <div class="card-body">
-        <div class="scenario-label">Active Failure Case</div>
-        <div class="case-name">{case}</div>
-        <div class="case-description">{description}</div>
+        <div class="scenario-label">Active Scenario</div>
+        <div class="scenario-name">{scenario}</div>
+        <div class="scenario-description">{description}</div>
         <div class="details-section">
           <div class="details-label">Details</div>
           <div class="card-extra">{body}</div>
