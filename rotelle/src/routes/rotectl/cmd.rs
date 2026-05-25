@@ -15,11 +15,17 @@ use tracing::info;
 type CmdResponse = (StatusCode, Json<serde_json::Value>);
 
 fn ok(scenario: &str) -> CmdResponse {
-    (StatusCode::OK, Json(serde_json::json!({"ok": true, "scenario": scenario})))
+    (
+        StatusCode::OK,
+        Json(serde_json::json!({"ok": true, "scenario": scenario})),
+    )
 }
 
 fn err(msg: impl std::fmt::Display) -> CmdResponse {
-    (StatusCode::BAD_REQUEST, Json(serde_json::json!({"ok": false, "error": msg.to_string()})))
+    (
+        StatusCode::BAD_REQUEST,
+        Json(serde_json::json!({"ok": false, "error": msg.to_string()})),
+    )
 }
 
 #[derive(Deserialize)]
