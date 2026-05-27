@@ -143,7 +143,7 @@ impl Scenario for MyScenario {
 
     fn on_index_request(&self) -> IndexEffect {
         IndexEffect::Respond("<p>my scenario is active</p>".to_string())
-        // or: IndexEffect::Exit(1)                       — crashes the pod
+        // or: IndexEffect::Exit                           — simulates a crash (health probe → 503)
         // or: IndexEffect::Hang                          — holds connection open
         // or: IndexEffect::RespondWithStatus(503, html)  — returns an error status
     }
@@ -182,7 +182,20 @@ fn on_resume(&self, params: &ActivationParams) { self.activate(params); }
 fn status_extras(&self) -> serde_json::Value {
     serde_json::json!({ "my_counter": 3 })
 }
+
+// Declare default parameter values — the control panel renders inputs automatically.
+// Omit entirely for scenarios with no configurable params.
+fn default_params(&self) -> ActivationParams {
+    ActivationParams::from_json(serde_json::json!({
+        "interval_secs": 10,
+        "label": "my-label"
+    }))
+}
 ```
+
+`default_params` is the only addition needed for a parameterized scenario. JSON number values render as `<input type="number">`, string values as `<input type="text">`. The key names must match what you read in `activate` with `params.get_u64` / `params.get_string`. No HTML, JS, or type changes are required anywhere else.
+
+**Storing param values** — decode params in `activate()` and store the resulting typed values in the struct (e.g. `Mutex<u64>`, `Mutex<String>`). Do not store the raw `ActivationParams` map. This keeps `status_extras()` and other methods simple — they read plain typed fields instead of re-parsing the map.
 
 ### Step 2 — Register in the catalog
 

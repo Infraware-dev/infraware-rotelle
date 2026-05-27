@@ -27,13 +27,16 @@ You need: `kubectl` pointed at any cluster. No cluster yet? Clone the repo and r
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle.yaml
 kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
-kubectl port-forward -n rotelle svc/rotelle 8080:8080
+# Simulation surface
+kubectl port-forward -n rotelle svc/rotelle 8080:8080 &
+# Control panel — always accessible even during OOM kills or crash loops
+kubectl port-forward -n rotelle svc/rotelle-control 9090:9090 &
 ```
 
 Trigger your first failure scenario — a pod crash every 5 requests:
 
 ```sh
-curl -X POST http://localhost:8080/rotectl/cmd \
+curl -X POST http://localhost:9090/rotectl/cmd \
   -H 'Content-Type: application/json' \
   -d '{"cmd": "set", "scenario": "crash-loop"}'
 ```
@@ -41,7 +44,7 @@ curl -X POST http://localhost:8080/rotectl/cmd \
 Reset to idle:
 
 ```sh
-curl -X POST http://localhost:8080/rotectl/cmd \
+curl -X POST http://localhost:9090/rotectl/cmd \
   -H 'Content-Type: application/json' \
   -d '{"cmd": "reset"}'
 ```
@@ -67,7 +70,8 @@ All control endpoints live under `/rotectl/` and stay responsive even when a sim
 | Method | Path | Description |
 |---|---|---|
 | `POST` | `/rotectl/cmd` | Activate or reset a scenario |
-| `GET` | `/rotectl/status` | Current scenario name and extras |
+| `GET` | `/rotectl/status` | Current scenario name and extras (JSON) |
+| `GET` | `/rotectl/control` | Browser control panel — switch scenarios, configure params |
 | `GET` | `/rotectl/health` | Always 200 — liveness probe |
 
 ---

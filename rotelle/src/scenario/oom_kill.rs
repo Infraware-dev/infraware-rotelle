@@ -6,7 +6,8 @@ use tokio::task::AbortHandle;
 pub struct OomKillScenario {
     memory_sink: Arc<Mutex<Vec<Vec<u8>>>>,
     leak_task: Mutex<Option<AbortHandle>>,
-    active_params: Mutex<Option<ActivationParams>>,
+    loop_time_secs: Mutex<u64>,
+    loop_amount_mb: Mutex<usize>,
 }
 
 impl OomKillScenario {
@@ -14,7 +15,8 @@ impl OomKillScenario {
         Self {
             memory_sink: Arc::new(Mutex::new(Vec::new())),
             leak_task: Mutex::new(None),
-            active_params: Mutex::new(None),
+            loop_time_secs: Mutex::new(10),
+            loop_amount_mb: Mutex::new(10),
         }
     }
 }
@@ -32,7 +34,8 @@ impl Scenario for OomKillScenario {
         let interval_secs = params.get_u64("loop_time_secs").unwrap_or(10);
         let amount_mb = params.get_usize("loop_amount_mb").unwrap_or(10);
 
-        *self.active_params.lock().unwrap() = Some(params.clone());
+        *self.loop_time_secs.lock().unwrap() = interval_secs;
+        *self.loop_amount_mb.lock().unwrap() = amount_mb;
 
         let sink = Arc::clone(&self.memory_sink);
         let handle = tokio::spawn(async move {
@@ -57,21 +60,27 @@ impl Scenario for OomKillScenario {
             handle.abort();
         }
         self.memory_sink.lock().unwrap().clear();
-        *self.active_params.lock().unwrap() = None;
     }
 
     fn on_index_request(&self) -> IndexEffect {
         let chunks = self.memory_sink.lock().unwrap().len();
         IndexEffect::Respond(format!(
-            "<p>Allocated chunks so far: <strong>{chunks}</strong></p>"
+            "<p>Memory pressure events: <strong>{chunks}</strong></p>"
         ))
     }
 
     fn status_extras(&self) -> serde_json::Value {
-        match &*self.active_params.lock().unwrap() {
-            Some(params) => params.to_json(),
-            None => serde_json::Value::Null,
-        }
+        serde_json::json!({
+            "loop_time_secs": *self.loop_time_secs.lock().unwrap(),
+            "loop_amount_mb": *self.loop_amount_mb.lock().unwrap(),
+        })
+    }
+
+    fn default_params(&self) -> ActivationParams {
+        ActivationParams::from_json(serde_json::json!({
+            "loop_time_secs": 10,
+            "loop_amount_mb": 10
+        }))
     }
 }
 

@@ -5,25 +5,21 @@ const DEFAULT_REQUIRED_VAR: &str = "REQUIRED_APP_SECRET";
 
 /// Simulates a deployment that exits on startup because a required env var is absent.
 ///
-/// Activation just persists the config. The crash happens on the next pod restart
-/// via `on_resume` (called before the server starts), which is the accurate
-/// reproduction of a startup-check failure. Any GET / while active also exits,
-/// so locally you can trigger the crash without restarting.
-///
-/// Setting the env var in the deployment "fixes" the scenario without a reset.
+/// Two parameters control the scenario entirely from the control panel:
+/// - `required_var` — name of the env var being checked (display / docs only)
+/// - `var_value`    — leave EMPTY to simulate the var being absent (→ crash);
+///   fill in ANY text to simulate the var being present (→ pass)
 pub struct MissingEnvVarScenario {
     required_var: Mutex<String>,
+    var_value: Mutex<String>,
 }
 
 impl MissingEnvVarScenario {
     pub fn new() -> Self {
         Self {
             required_var: Mutex::new(DEFAULT_REQUIRED_VAR.to_string()),
+            var_value: Mutex::new(String::new()),
         }
-    }
-
-    fn var_name(&self) -> String {
-        self.required_var.lock().unwrap().clone()
     }
 }
 
@@ -33,54 +29,47 @@ impl Scenario for MissingEnvVarScenario {
     }
 
     fn description(&self) -> &'static str {
-        "Exits if a required environment variable is absent — simulates a deployment missing required configuration."
+        "Simulates a missing required env var. Leave var_value empty to trigger the crash; set it to any value to simulate the var being present."
     }
 
     fn activate(&self, params: &ActivationParams) {
         let var_name = params
             .get_string("required_var")
+            .filter(|s| !s.is_empty())
             .unwrap_or_else(|| DEFAULT_REQUIRED_VAR.to_string());
+        let var_value = params.get_string("var_value").unwrap_or_default();
         *self.required_var.lock().unwrap() = var_name.clone();
-        tracing::info!(var = %var_name, "missing-env-var: activated — crash will trigger on next pod restart or GET /");
+        *self.var_value.lock().unwrap() = var_value.clone();
+        tracing::info!(var = %var_name, present = !var_value.is_empty(), "missing-env-var: activated");
     }
 
-    fn deactivate(&self) {}
+    fn deactivate(&self) {
+        *self.var_value.lock().unwrap() = String::new();
+    }
 
     fn on_index_request(&self) -> IndexEffect {
-        let var = self.var_name();
-        if std::env::var(&var).is_err() {
-            tracing::warn!(var = %var, "missing-env-var: env var absent, exiting");
-            IndexEffect::Exit(1)
-        } else {
+        let var = self.required_var.lock().unwrap().clone();
+        let present = !self.var_value.lock().unwrap().is_empty();
+        if present {
             IndexEffect::Respond(format!(
-                "<p>Environment variable <code>{var}</code> is present — \
-                 startup check passed.</p>"
+                "<p>Environment variable <code>{var}</code> is present — startup check passed.</p>"
             ))
+        } else {
+            tracing::warn!(var = %var, "missing-env-var: env var absent, exiting");
+            IndexEffect::Exit
         }
-    }
-
-    /// Exit immediately if the required var is still absent — this is what produces
-    /// CrashLoopBackOff. Called before the server starts, so the pod never becomes
-    /// ready. If the operator has since added the var, resume normally.
-    fn on_resume(&self, params: &ActivationParams) {
-        let var_name = params
-            .get_string("required_var")
-            .unwrap_or_else(|| DEFAULT_REQUIRED_VAR.to_string());
-        *self.required_var.lock().unwrap() = var_name.clone();
-
-        if std::env::var(&var_name).is_err() {
-            tracing::warn!(var = %var_name, "missing-env-var: required env var absent on pod restart, exiting");
-            std::process::exit(1);
-        }
-        tracing::info!(var = %var_name, "missing-env-var: required env var present on resume");
     }
 
     fn status_extras(&self) -> serde_json::Value {
-        let var = self.var_name();
-        let present = std::env::var(&var).is_ok();
-        serde_json::json!({
-            "required_var": var,
-            "var_present": present,
-        })
+        let var = self.required_var.lock().unwrap().clone();
+        let present = !self.var_value.lock().unwrap().is_empty();
+        serde_json::json!({ "required_var": var, "var_present": present })
+    }
+
+    fn default_params(&self) -> ActivationParams {
+        ActivationParams::from_json(serde_json::json!({
+            "required_var": "REQUIRED_APP_SECRET",
+            "var_value": ""
+        }))
     }
 }

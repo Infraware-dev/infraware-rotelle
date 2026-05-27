@@ -24,7 +24,9 @@ GHCR_IMAGE="ghcr.io/infraware-dev/infraware-rotelle:latest"
 LOCAL_IMAGE="rotelle:dev"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PORT=8080
+CONTROL_PORT=9090
 PF_PID=""
+PF_CONTROL_PID=""
 NAMESPACE=""
 MANIFEST=""
 
@@ -58,8 +60,8 @@ cleanup() {
     fi
   fi
   if [[ -n "$PF_PID" ]] && kill -0 "$PF_PID" 2>/dev/null; then
-    info "Port-forward is still running (PID $PF_PID)."
-    info "To stop it: kill $PF_PID"
+    info "Port-forward loops still running (PIDs $PF_PID, $PF_CONTROL_PID)."
+    info "To stop them: kill $PF_PID $PF_CONTROL_PID"
   fi
 }
 trap cleanup EXIT
@@ -201,36 +203,64 @@ deploy() {
 
 # ── port-forward ────────────────────────────────────────────────────────────────
 start_port_forward() {
-  step "Opening port-forward → localhost:$PORT"
+  step "Opening port-forwards → localhost:$PORT (sim) and localhost:$CONTROL_PORT (control)"
 
-  # Fail early if another process already owns the port — otherwise the health
-  # check below would succeed against that process and the demo would silently
-  # hit the wrong server.
-  if lsof -iTCP:"$PORT" -sTCP:LISTEN -t &>/dev/null 2>&1; then
-    die "Port $PORT is already in use by another process (e.g. 'just run').
-       Stop it first, then re-run this script:
-         kill \$(lsof -iTCP:$PORT -sTCP:LISTEN -t)"
-  fi
+  free_port_or_die() {
+    local port="$1"
+    local pids owner proc
+    pids=$(lsof -iTCP:"$port" -sTCP:LISTEN -t 2>/dev/null) || return 0
+    proc=$(lsof -iTCP:"$port" -sTCP:LISTEN 2>/dev/null | awk 'NR==2 {print $1}')
+    if [[ "$proc" == "kubectl" ]]; then
+      warn "Port $port held by a previous kubectl port-forward — cleaning it up."
+      kill $pids 2>/dev/null || true
+      sleep 1
+    else
+      owner=$(lsof -iTCP:"$port" -sTCP:LISTEN 2>/dev/null | awk 'NR==2 {print $1, "(PID "$2")"}')
+      die "Port $port is already in use${owner:+ by $owner}. Run this to free it:
+           kill \$(lsof -iTCP:$port -sTCP:LISTEN -t)"
+    fi
+  }
 
-  kubectl port-forward -n "$NAMESPACE" svc/rotelle "${PORT}:${PORT}" \
-    >/dev/null 2>&1 &
+  free_port_or_die "$PORT"
+  free_port_or_die "$CONTROL_PORT"
+
+  # Run each port-forward in a loop so it reconnects automatically when the sim
+  # container restarts (e.g. after a crash-loop or OOM-kill scenario).
+  (
+    trap 'kill $(jobs -p) 2>/dev/null' EXIT
+    while true; do
+      kubectl port-forward -n "$NAMESPACE" svc/rotelle "${PORT}:${PORT}" >/dev/null 2>&1 || true
+      sleep 1
+    done
+  ) &
   PF_PID=$!
 
-  # Give the tunnel a moment to connect
+  (
+    trap 'kill $(jobs -p) 2>/dev/null' EXIT
+    while true; do
+      kubectl port-forward -n "$NAMESPACE" svc/rotelle-control "${CONTROL_PORT}:${CONTROL_PORT}" >/dev/null 2>&1 || true
+      sleep 1
+    done
+  ) &
+  PF_CONTROL_PID=$!
+
+  # Wait for the control plane to become ready (it starts fast and is never crashed)
   local ready=false
   for _ in 1 2 3 4 5; do
     sleep 1
-    if curl -sf "http://localhost:${PORT}/rotectl/health" &>/dev/null; then
+    if curl -sf "http://localhost:${CONTROL_PORT}/rotectl/health" &>/dev/null; then
       ready=true
       break
     fi
   done
 
   if ! $ready; then
-    warn "Port-forward may not be ready yet. If the demo fails, run:"
-    warn "  kubectl port-forward -n $NAMESPACE svc/rotelle ${PORT}:${PORT}"
+    warn "Port-forward may not be ready yet. If the demo fails, run manually:"
+    warn "  kubectl port-forward -n $NAMESPACE svc/rotelle ${PORT}:${PORT} &"
+    warn "  kubectl port-forward -n $NAMESPACE svc/rotelle-control ${CONTROL_PORT}:${CONTROL_PORT} &"
   else
-    info "Reachable at http://localhost:${PORT}"
+    info "Simulation  → http://localhost:${PORT}"
+    info "Control     → http://localhost:${CONTROL_PORT}/rotectl/control"
   fi
 }
 
@@ -245,19 +275,19 @@ run_demo() {
   hr
   echo -e "  ${CYAN}1. Check current status — should be idle:${NC}"
   hr
-  echo -n "  \$ curl http://localhost:${PORT}/rotectl/status"
+  echo -n "  \$ curl http://localhost:${CONTROL_PORT}/rotectl/status"
   echo ""
-  curl -sf "http://localhost:${PORT}/rotectl/status" && echo
+  curl -sf "http://localhost:${CONTROL_PORT}/rotectl/status" && echo
   echo ""
 
   hr
   echo -e "  ${CYAN}2. Activate 'crash-loop' — crash every 5th request:${NC}"
   hr
-  echo "  \$ curl -X POST http://localhost:${PORT}/rotectl/cmd \\"
+  echo "  \$ curl -X POST http://localhost:${CONTROL_PORT}/rotectl/cmd \\"
   echo "      -H 'Content-Type: application/json' \\"
   echo "      -d '{\"cmd\": \"set\", \"scenario\": \"crash-loop\"}'"
   echo ""
-  curl -sf -X POST "http://localhost:${PORT}/rotectl/cmd" \
+  curl -sf -X POST "http://localhost:${CONTROL_PORT}/rotectl/cmd" \
     -H 'Content-Type: application/json' \
     -d '{"cmd": "set", "scenario": "crash-loop"}' && echo
   echo ""
@@ -278,13 +308,13 @@ run_demo() {
   hr
   echo -e "  ${CYAN}4. Status now shows access_count and crash_every:${NC}"
   hr
-  curl -sf "http://localhost:${PORT}/rotectl/status" && echo
+  curl -sf "http://localhost:${CONTROL_PORT}/rotectl/status" && echo
   echo ""
 
   hr
   echo -e "  ${CYAN}5. Reset to idle:${NC}"
   hr
-  curl -sf -X POST "http://localhost:${PORT}/rotectl/cmd" \
+  curl -sf -X POST "http://localhost:${CONTROL_PORT}/rotectl/cmd" \
     -H 'Content-Type: application/json' \
     -d '{"cmd": "reset"}' && echo
   echo ""
@@ -299,13 +329,15 @@ print_summary() {
   echo ""
   local running_image
   running_image=$(kubectl get pod -n "$NAMESPACE" -o jsonpath='{.items[0].spec.containers[0].image}' 2>/dev/null || echo "unknown")
-  echo -e "  Control API  →  ${CYAN}http://localhost:${PORT}/rotectl/status${NC}"
+  echo -e "  Simulation   →  ${CYAN}http://localhost:${PORT}${NC}"
+  echo -e "  Control panel→  ${CYAN}http://localhost:${CONTROL_PORT}/rotectl/control${NC}"
+  echo -e "  Control API  →  ${CYAN}http://localhost:${CONTROL_PORT}/rotectl/status${NC}"
   echo -e "  Running image→  ${CYAN}${running_image}${NC}"
   echo -e "  Next steps   →  ${CYAN}ONBOARDING.md${NC}"
   echo -e "  All scenarios →  ${CYAN}docs/scenarios.md${NC}"
   echo ""
-  echo -e "  Port-forward is running in the background (PID $PF_PID)."
-  echo -e "  To stop:      ${YELLOW}kill $PF_PID${NC}"
+  echo -e "  Port-forwards running in background (PIDs $PF_PID, $PF_CONTROL_PID)."
+  echo -e "  To stop:      ${YELLOW}kill $PF_PID $PF_CONTROL_PID${NC}"
   echo -e "  To tear down: ${YELLOW}kind delete cluster --name $CLUSTER_NAME${NC}"
   echo ""
 }

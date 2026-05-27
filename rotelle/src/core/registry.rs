@@ -1,4 +1,4 @@
-use super::Scenario;
+use super::{Scenario, ScenarioMeta};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -25,5 +25,22 @@ impl ScenarioRegistry {
     /// Create a fresh instance of the named scenario, or `None` if unknown.
     pub fn create(&self, name: &str) -> Option<Arc<dyn Scenario>> {
         self.entries.get(name).map(|f| f())
+    }
+
+    /// Returns [`ScenarioMeta`] for every registered scenario, sorted by name.
+    pub fn list(&self) -> Vec<ScenarioMeta> {
+        let mut entries: Vec<_> = self
+            .entries
+            .values()
+            .map(|f| {
+                let s = f();
+                ScenarioMeta {
+                    name: s.name(),
+                    description: s.description(),
+                }
+            })
+            .collect();
+        entries.sort_by_key(|m| m.name);
+        entries
     }
 }

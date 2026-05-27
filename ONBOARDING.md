@@ -31,7 +31,8 @@ Deploy to any cluster reachable via `kubectl cluster-info`. No local build requi
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle.yaml
 kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
-kubectl port-forward -n rotelle svc/rotelle 8080:8080
+kubectl port-forward -n rotelle svc/rotelle 8080:8080 &
+kubectl port-forward -n rotelle svc/rotelle-control 9090:9090 &
 ```
 
 Tear down when done:
@@ -80,7 +81,7 @@ The script:
 ### Step 2 — Verify Rotelle is running
 
 ```sh
-curl http://localhost:8080/rotectl/status
+curl http://localhost:9090/rotectl/status
 # {"scenario":"none, idle","description":"No failure active — service responds normally."}
 ```
 
@@ -97,7 +98,7 @@ curl http://localhost:8080/rotectl/status
 **Activate:**
 
 ```sh
-curl -X POST http://localhost:8080/rotectl/cmd \
+curl -X POST http://localhost:9090/rotectl/cmd \
   -H 'Content-Type: application/json' \
   -d '{"cmd": "set", "scenario": "crash-loop"}'
 ```
@@ -121,7 +122,7 @@ After the 5th request you will see the pod restart and `RESTARTS` increment in T
 **Check status while running:**
 
 ```sh
-curl http://localhost:8080/rotectl/status
+curl http://localhost:9090/rotectl/status
 # {"scenario":"crash-loop","description":"...","access_count":3,"crash_every":5}
 ```
 
@@ -130,7 +131,7 @@ The control API (`/rotectl/*`) always responds — even while the application is
 **Reset:**
 
 ```sh
-curl -X POST http://localhost:8080/rotectl/cmd \
+curl -X POST http://localhost:9090/rotectl/cmd \
   -H 'Content-Type: application/json' \
   -d '{"cmd": "reset"}'
 ```
@@ -146,7 +147,8 @@ All `/rotectl/` endpoints stay responsive even when a simulation is crashing or 
 | Method | Path | Description |
 |---|---|---|
 | `POST` | `/rotectl/cmd` | Activate (`set`), reset (`reset`), or checkpoint (`check`) a scenario |
-| `GET` | `/rotectl/status` | Current scenario name, params, and scenario-specific extras |
+| `GET` | `/rotectl/status` | Current scenario name, params, and scenario-specific extras (JSON) |
+| `GET` | `/rotectl/control` | Browser control panel — switch scenarios and configure params |
 | `GET` | `/rotectl/health` | Always 200 — used as the pod liveness probe |
 | `GET` | `/health` | Application health — may fail depending on the active scenario |
 

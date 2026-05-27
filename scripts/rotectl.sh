@@ -4,22 +4,18 @@
 # Usage:
 #   ./scripts/rotectl.sh [HOST] <scenario>
 #
-#   HOST  optional base URL (default: http://localhost:8080)
+#   HOST  optional base URL
+#         default: http://localhost:8080  (local dev: `just run` runs full mode on 8080)
+#         K8s:     http://localhost:9090  (control sidecar is port-forwarded on 9090)
 #   scenario  idle | check | crash-loop | oom-kill | missing-env-var | service-unreachable | ingress-conflict
 #
-# Examples:
+# Examples (local dev):
 #   ./scripts/rotectl.sh idle
 #   ./scripts/rotectl.sh crash-loop
+#
+# Examples (K8s — after: kubectl port-forward -n rotelle svc/rotelle-control 9090:9090 &):
+#   ./scripts/rotectl.sh http://localhost:9090 crash-loop
 #   ./scripts/rotectl.sh http://rotelle.example.com idle
-#
-# Equivalent curl commands:
-#   curl -s -X POST http://localhost:8080/rotectl/cmd \
-#        -H 'Content-Type: application/json' \
-#        -d '{"cmd":"reset"}'
-#
-#   curl -s -X POST http://localhost:8080/rotectl/cmd \
-#        -H 'Content-Type: application/json' \
-#        -d '{"cmd":"set","scenario":"crash-loop"}'
 
 set -euo pipefail
 

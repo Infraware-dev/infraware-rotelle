@@ -37,13 +37,11 @@ impl Scenario for IngressConflictScenario {
         tracing::info!(count = n, "ingress-conflict: index access");
 
         if n.is_multiple_of(FAIL_EVERY) {
-            tracing::warn!(count = n, "ingress-conflict: simulating 502 gateway error");
-            IndexEffect::RespondWithStatus(502, gateway_error_html(n))
+            tracing::warn!(count = n, "ingress-conflict: 502");
+            IndexEffect::RespondWithStatus(502, gateway_error_html())
         } else {
-            let next_fail = (n / FAIL_EVERY + 1) * FAIL_EVERY;
             IndexEffect::Respond(format!(
-                "<p>Request <strong>{n}</strong>: routed correctly via LoadBalancer. \
-                 Next conflict (502) at request <strong>{next_fail}</strong>.</p>"
+                "<p>Request <strong>{n}</strong> handled successfully.</p>"
             ))
         }
     }
@@ -56,16 +54,14 @@ impl Scenario for IngressConflictScenario {
     }
 }
 
-fn gateway_error_html(n: u32) -> String {
-    format!(
-        r#"<!DOCTYPE html>
+fn gateway_error_html() -> String {
+    r#"<!DOCTYPE html>
 <html>
 <head><title>502 Bad Gateway</title></head>
 <body>
 <h1>502 Bad Gateway</h1>
 <p>The upstream server returned an invalid response.</p>
-<p><small>Request {n} — simulated LoadBalancer + Ingress routing conflict</small></p>
 </body>
 </html>"#
-    )
+    .to_string()
 }

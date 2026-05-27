@@ -37,13 +37,10 @@ impl Scenario for CrashLoopScenario {
         tracing::info!(count = n, "crash-loop: index access");
         if n.is_multiple_of(CRASH_EVERY) {
             tracing::warn!(count = n, "crash-loop: simulating crash");
-            IndexEffect::Exit(1)
+            IndexEffect::Exit
         } else {
-            let next_crash = (n / CRASH_EVERY + 1) * CRASH_EVERY;
             IndexEffect::Respond(format!(
-                "<p>Crash every <strong>N={CRASH_EVERY}</strong> accesses. \
-                 Current count: <strong>{n}</strong>. \
-                 Next crash at: <strong>{next_crash}</strong></p>"
+                "<p>Requests served: <strong>{n}</strong></p>"
             ))
         }
     }
