@@ -1,5 +1,9 @@
 use crate::state::AppState;
-use poem::{handler, http::StatusCode, web::{Data, Json}};
+use poem::{
+    handler,
+    http::StatusCode,
+    web::{Data, Json},
+};
 use std::sync::atomic::Ordering;
 
 /// Simulation health — returns 503 when the active scenario has triggered a crash.

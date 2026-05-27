@@ -57,10 +57,9 @@ async fn main() -> Result<(), std::io::Error> {
         initial.on_resume(&params);
     }
 
-    let control_url = std::env::var("ROTELLE_CONTROL_URL")
-        .unwrap_or_else(|_| "/rotectl/control".to_string());
-    let sim_url = std::env::var("ROTELLE_SIM_URL")
-        .unwrap_or_else(|_| "/".to_string());
+    let control_url =
+        std::env::var("ROTELLE_CONTROL_URL").unwrap_or_else(|_| "/rotectl/control".to_string());
+    let sim_url = std::env::var("ROTELLE_SIM_URL").unwrap_or_else(|_| "/".to_string());
 
     let app_state = AppState {
         active_scenario: Arc::new(Mutex::new(initial)),
@@ -95,7 +94,10 @@ async fn main() -> Result<(), std::io::Error> {
                     last = current;
                     let (new_scenario, new_params) = load_state(&path);
                     if let Some(s) = state.registry.create(&new_scenario) {
-                        info!(scenario = new_scenario, "sim: detected state change, applying");
+                        info!(
+                            scenario = new_scenario,
+                            "sim: detected state change, applying"
+                        );
                         state.apply_scenario(s, new_params);
                     }
                 }

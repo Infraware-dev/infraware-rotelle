@@ -21,7 +21,11 @@ pub async fn index(state: Data<&AppState>) -> Response {
         IndexEffect::Respond(body) => {
             // Hide the Control nav link in sim mode — the control panel is on a separate
             // port and must not be discoverable from the simulation surface.
-            let control_url = if state.mode == Mode::Sim { "" } else { &state.control_url };
+            let control_url = if state.mode == Mode::Sim {
+                ""
+            } else {
+                &state.control_url
+            };
             Html(page_html(name, &body, control_url, &state.sim_url)).into_response()
         }
         IndexEffect::Exit => {

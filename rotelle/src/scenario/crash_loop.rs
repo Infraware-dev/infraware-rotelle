@@ -39,9 +39,7 @@ impl Scenario for CrashLoopScenario {
             tracing::warn!(count = n, "crash-loop: simulating crash");
             IndexEffect::Exit
         } else {
-            IndexEffect::Respond(format!(
-                "<p>Requests served: <strong>{n}</strong></p>"
-            ))
+            IndexEffect::Respond(format!("<p>Requests served: <strong>{n}</strong></p>"))
         }
     }
 

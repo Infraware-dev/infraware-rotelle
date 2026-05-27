@@ -18,5 +18,13 @@ pub fn control(state: Data<&AppState>) -> Html<String> {
     scenarios.retain(|m| m.name != "check");
     // "none, idle" (reset state) always appears first.
     scenarios.sort_by_key(|m| if m.name == "none, idle" { "" } else { m.name });
-    Html(control_html(active_name, active_desc, &active_params, &scenarios, &sim_status, &state.control_url, &state.sim_url))
+    Html(control_html(
+        active_name,
+        active_desc,
+        &active_params,
+        &scenarios,
+        &sim_status,
+        &state.control_url,
+        &state.sim_url,
+    ))
 }

@@ -53,7 +53,6 @@ impl ActivationParams {
     pub fn get_string(&self, key: &str) -> Option<String> {
         self.0.get(key)?.as_str().map(|s| s.to_string())
     }
-
 }
 
 impl From<HashMap<String, Value>> for ActivationParams {
@@ -747,11 +746,19 @@ const CONTROL_JS: &str = r#"
 // ── HTML helpers ──────────────────────────────────────────────────────────────
 
 fn logo_nav_html(active_href: &str, sim_url: &str, control_url: &str) -> String {
-    let status_active = if active_href == "/" { " nav-active" } else { "" };
+    let status_active = if active_href == "/" {
+        " nav-active"
+    } else {
+        ""
+    };
     let control_link = if control_url.is_empty() {
         String::new()
     } else {
-        let active = if active_href != "/" { " nav-active" } else { "" };
+        let active = if active_href != "/" {
+            " nav-active"
+        } else {
+            ""
+        };
         format!(r#"<a href="{control_url}" class="nav-link{active}">Control</a>"#)
     };
     format!(

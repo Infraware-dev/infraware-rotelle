@@ -63,5 +63,5 @@ fn gateway_error_html() -> String {
 <p>The upstream server returned an invalid response.</p>
 </body>
 </html>"#
-    .to_string()
+        .to_string()
 }
