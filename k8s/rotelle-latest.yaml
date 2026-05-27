@@ -1,3 +1,5 @@
+# rotelle-latest.yaml — always pulls the latest published image.
+# Use for quick installs; for production pin to a specific version via rotelle.yaml.
 apiVersion: v1
 kind: Namespace
 metadata:
@@ -22,8 +24,8 @@ spec:
     spec:
       containers:
         - name: rotelle
-          image: ghcr.io/infraware-dev/infraware-rotelle:v0.1.0
-          imagePullPolicy: IfNotPresent
+          image: ghcr.io/infraware-dev/infraware-rotelle:latest
+          imagePullPolicy: Always
           env:
             - name: ROTELLE_MODE
               value: "sim"
@@ -50,8 +52,8 @@ spec:
               mountPath: /data
 
         - name: rotelle-control
-          image: ghcr.io/infraware-dev/infraware-rotelle:v0.1.0
-          imagePullPolicy: IfNotPresent
+          image: ghcr.io/infraware-dev/infraware-rotelle:latest
+          imagePullPolicy: Always
           env:
             - name: ROTELLE_MODE
               value: "control"
