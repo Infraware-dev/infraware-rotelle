@@ -13,6 +13,7 @@ an HTTP server (via [Poem](https://github.com/poem-web/poem)) with two surfaces:
 ```
 src/
 ├── main.rs                    — startup: build registry, load state, start server
+├── catalog.rs                 — list of all scenario factories  ← add new scenarios here
 ├── state.rs                   — AppState, load/persist state to disk
 ├── core/
 │   ├── mod.rs                 — module index + re-exports
@@ -20,31 +21,23 @@ src/
 │   └── registry.rs            — ScenarioRegistry (name → factory lookup)
 ├── scenario/
 │   ├── mod.rs                 — pub mod declarations + re-exports from core
-│   ├── catalog.rs             — list of all scenario factories  ← add new scenarios here
-│   ├── idle.rs                — "none, idle"
-│   ├── check.rs               — "check"
-│   ├── intermittent_01.rs     — "intermittent-01"
-│   ├── intermittent_02.rs     — "intermittent-02"
-│   ├── missing_env_var.rs     — "missing-env-var"
-│   ├── service_unreachable.rs — "service-unreachable"
-│   └── ingress_conflict.rs    — "ingress-conflict"
+│   └── <name>.rs              — one file per scenario; see docs/scenarios.md for the full list
 └── routes/
     ├── mod.rs
     ├── index.rs               — GET /  → active scenario's on_index_request()
-    ├── health.rs              — GET /health
+    ├── health.rs              — GET /health and GET /rotectl/health
     ├── logo.rs                — GET /logo.png, GET /favicon.png — compiled-in static assets
     └── rotectl/
         ├── cmd.rs             — POST /rotectl/cmd — activates via registry
-        ├── status.rs          — GET /rotectl/status
-        └── health.rs          — GET /rotectl/health
+        └── status.rs          — GET /rotectl/status
 ```
 
 ## How it works
 
-**Adding a scenario** requires touching three source locations — a new file, one
-line in `catalog.rs`, and one line in `mod.rs` — plus a hurl test and a
-`rotelle-cases.md` entry. Everything else (routing, persistence, status) is
-wired up automatically.
+**Adding a scenario** requires touching three source locations — a new file in
+`scenario/`, one line in `catalog.rs`, and one line in `scenario/mod.rs` — plus
+a hurl test and a `scenarios.md` entry. Everything else (routing, persistence,
+status) is wired up automatically.
 
 ### `core/scenario_template.rs` — the full contract
 
@@ -55,9 +48,9 @@ One file defines everything a scenario works with:
 - `Scenario` trait — five required methods (`name`, `description`, `activate`,
   `deactivate`, `on_index_request`) plus two optional ones with defaults.
 - `IndexEffect` — what `on_index_request` returns: `Respond(html)`, `Exit(code)`, `Hang` (hold connection open), or `RespondWithStatus(status, html)`.
-- `page_html(case, description, body)` — helper that renders the standard index page; `description` comes from `Scenario::description()` and is shown below the case name.
+- `page_html(scenario, description, body)` — helper that renders the standard index page; `description` comes from `Scenario::description()` and is shown below the scenario name.
 
-### `catalog.rs` — the scenario list
+### `catalog.rs` — the scenario registry
 
 A single `Vec` of factory closures. The registry calls each factory once at
 startup to read `Scenario::name()`; later calls produce fresh instances.
@@ -65,9 +58,9 @@ startup to read `Scenario::name()`; later calls produce fresh instances.
 ### Request flow
 
 ```
-POST /rotectl/cmd  {"cmd":"set","case":"intermittent-02","loop_time_secs":10}
+POST /rotectl/cmd  {"cmd":"set","scenario":"oom-kill","loop_time_secs":10}
   → cmd.rs         parses extra fields into ActivationParams
-  → registry       create("intermittent-02") → fresh Intermittent02Scenario
+  → registry       create("oom-kill") → fresh OomKillScenario
   → AppState       old.deactivate(); new.activate(&params); persist to disk
 
 GET /
@@ -80,7 +73,7 @@ GET /
 After every scenario switch, `AppState` writes to `/data/state.json`:
 
 ```json
-{"failure_case": "intermittent-02", "params": {"loop_time_secs": 10, "loop_amount_mb": 15}}
+{"scenario": "oom-kill", "params": {"loop_time_secs": 10, "loop_amount_mb": 15}}
 ```
 
 On pod restart, `load_state` reads the file, the registry recreates the
@@ -88,9 +81,4 @@ scenario, and `on_resume` restarts any background tasks.
 
 ## Adding a new scenario
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md). Short version:
-
-1. Implement `Scenario` in `src/scenario/<name>.rs`.
-2. Add `Box::new(|| Arc::new(MyScenario::new()))` to `catalog::all()`.
-3. Expose the module in `mod.rs`.
-4. Write a hurl test and a `docs/rotelle-cases.md` entry.
+See [CONTRIBUTING.md](../CONTRIBUTING.md).

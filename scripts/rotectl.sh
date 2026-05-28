@@ -2,14 +2,14 @@
 # rotectl.sh — send commands to the rotelle /rotectl/cmd endpoint
 #
 # Usage:
-#   ./scripts/rotectl.sh [HOST] <case>
+#   ./scripts/rotectl.sh [HOST] <scenario>
 #
 #   HOST  optional base URL (default: http://localhost:8080)
-#   case  idle | c1 | check | intermittent-01 | intermittent-02
+#   scenario  idle | check | crash-loop | oom-kill | missing-env-var | service-unreachable | ingress-conflict
 #
 # Examples:
 #   ./scripts/rotectl.sh idle
-#   ./scripts/rotectl.sh c1
+#   ./scripts/rotectl.sh crash-loop
 #   ./scripts/rotectl.sh http://rotelle.example.com idle
 #
 # Equivalent curl commands:
@@ -19,7 +19,7 @@
 #
 #   curl -s -X POST http://localhost:8080/rotectl/cmd \
 #        -H 'Content-Type: application/json' \
-#        -d '{"cmd":"set","case":"c1"}'
+#        -d '{"cmd":"set","scenario":"crash-loop"}'
 
 set -euo pipefail
 
@@ -31,32 +31,41 @@ if [[ "${1:-}" == http* ]]; then
     shift
 fi
 
-CASE="${1:-}"
+SCENARIO="${1:-}"
 
-case "$CASE" in
+case "$SCENARIO" in
     idle)
         BODY='{"cmd":"reset"}'
         ;;
     check)
         BODY='{"cmd":"check"}'
         ;;
-    intermittent-01)
-        BODY='{"cmd":"set","case":"intermittent-01"}'
+    crash-loop)
+        BODY='{"cmd":"set","scenario":"crash-loop"}'
         ;;
-    intermittent-02)
+    oom-kill)
         # Optional env overrides: LOOP_TIME_SECS (default 10), LOOP_AMOUNT_MB (default 10)
         LOOP_TIME_SECS="${LOOP_TIME_SECS:-10}"
         LOOP_AMOUNT_MB="${LOOP_AMOUNT_MB:-10}"
-        BODY="{\"cmd\":\"set\",\"case\":\"intermittent-02\",\"loop_time_secs\":${LOOP_TIME_SECS},\"loop_amount_mb\":${LOOP_AMOUNT_MB}}"
+        BODY="{\"cmd\":\"set\",\"scenario\":\"oom-kill\",\"loop_time_secs\":${LOOP_TIME_SECS},\"loop_amount_mb\":${LOOP_AMOUNT_MB}}"
+        ;;
+    missing-env-var)
+        BODY='{"cmd":"set","scenario":"missing-env-var"}'
+        ;;
+    service-unreachable)
+        BODY='{"cmd":"set","scenario":"service-unreachable"}'
+        ;;
+    ingress-conflict)
+        BODY='{"cmd":"set","scenario":"ingress-conflict"}'
         ;;
     "")
-        echo "Usage: $(basename "$0") [HOST] <case>" >&2
-        echo "Cases: idle | c1 | check | intermittent-01 | intermittent-02" >&2
+        echo "Usage: $(basename "$0") [HOST] <scenario>" >&2
+        echo "Scenarios: idle | check | crash-loop | oom-kill | missing-env-var | service-unreachable | ingress-conflict" >&2
         exit 1
         ;;
     *)
-        echo "Unknown case: $CASE" >&2
-        echo "Cases: idle | c1 | check | intermittent-01 | intermittent-02" >&2
+        echo "Unknown scenario: $SCENARIO" >&2
+        echo "Scenarios: idle | check | crash-loop | oom-kill | missing-env-var | service-unreachable | ingress-conflict" >&2
         exit 1
         ;;
 esac

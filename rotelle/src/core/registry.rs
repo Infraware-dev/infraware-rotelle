@@ -1,6 +1,6 @@
+use super::Scenario;
 use std::collections::HashMap;
 use std::sync::Arc;
-use super::Scenario;
 
 pub type Factory = Box<dyn Fn() -> Arc<dyn Scenario> + Send + Sync>;
 
@@ -11,8 +11,8 @@ pub struct ScenarioRegistry {
 }
 
 impl ScenarioRegistry {
-    /// Build a registry from the list returned by [`crate::scenario::catalog::all`].
-    /// Names are read from [`Scenario::name`] — never duplicated.
+    /// Names are read from [`Scenario::name`]. If two factories return the same name the
+    /// second silently wins, so keep names unique across `catalog::all()`.
     pub fn from_catalog(factories: Vec<Factory>) -> Self {
         let mut entries = HashMap::new();
         for factory in factories {

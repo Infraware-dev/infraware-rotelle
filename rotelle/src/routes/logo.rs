@@ -1,4 +1,4 @@
-use poem::{handler, Response, http::StatusCode};
+use poem::{Response, handler, http::StatusCode};
 
 static LOGO: &[u8] = include_bytes!("../../static/logo.png");
 static FAVICON: &[u8] = include_bytes!("../../static/favicon.png");

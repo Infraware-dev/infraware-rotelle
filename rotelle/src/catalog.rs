@@ -1,13 +1,13 @@
 use std::sync::Arc;
 
-use super::check::Check;
-use super::idle::Idle;
-use super::intermittent_01::Intermittent01Scenario;
-use super::intermittent_02::Intermittent02Scenario;
-use super::missing_env_var::MissingEnvVarScenario;
-use super::ingress_conflict::IngressConflictScenario;
-use super::service_unreachable::ServiceUnreachableScenario;
 use crate::core::registry::Factory;
+use crate::scenario::check::Check;
+use crate::scenario::crash_loop::CrashLoopScenario;
+use crate::scenario::idle::Idle;
+use crate::scenario::ingress_conflict::IngressConflictScenario;
+use crate::scenario::missing_env_var::MissingEnvVarScenario;
+use crate::scenario::oom_kill::OomKillScenario;
+use crate::scenario::service_unreachable::ServiceUnreachableScenario;
 
 /// All built-in failure scenarios.
 ///
@@ -17,8 +17,8 @@ pub fn all() -> Vec<Factory> {
     vec![
         Box::new(|| Arc::new(Idle::new())),
         Box::new(|| Arc::new(Check::new())),
-        Box::new(|| Arc::new(Intermittent01Scenario::new())),
-        Box::new(|| Arc::new(Intermittent02Scenario::new())),
+        Box::new(|| Arc::new(CrashLoopScenario::new())),
+        Box::new(|| Arc::new(OomKillScenario::new())),
         Box::new(|| Arc::new(MissingEnvVarScenario::new())),
         Box::new(|| Arc::new(ServiceUnreachableScenario::new())),
         Box::new(|| Arc::new(IngressConflictScenario::new())),

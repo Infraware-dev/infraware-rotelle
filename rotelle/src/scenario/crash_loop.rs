@@ -1,16 +1,13 @@
-use std::sync::Mutex;
 use super::{ActivationParams, IndexEffect, Scenario};
+use std::sync::Mutex;
 
 const CRASH_EVERY: u32 = 5;
 
-/// Simulates intermittent pod crashes: exits on every N-th GET /.
-///
-/// Kubernetes detects the non-zero exit code and restarts the pod.
-pub struct Intermittent01Scenario {
+pub struct CrashLoopScenario {
     access_count: Mutex<u32>,
 }
 
-impl Intermittent01Scenario {
+impl CrashLoopScenario {
     pub fn new() -> Self {
         Self {
             access_count: Mutex::new(0),
@@ -18,9 +15,9 @@ impl Intermittent01Scenario {
     }
 }
 
-impl Scenario for Intermittent01Scenario {
+impl Scenario for CrashLoopScenario {
     fn name(&self) -> &'static str {
-        "intermittent-01"
+        "crash-loop"
     }
 
     fn description(&self) -> &'static str {
@@ -37,9 +34,9 @@ impl Scenario for Intermittent01Scenario {
         let mut count = self.access_count.lock().unwrap();
         *count += 1;
         let n = *count;
-        tracing::info!(count = n, "intermittent-01: index access");
-        if n % CRASH_EVERY == 0 {
-            tracing::warn!(count = n, "intermittent-01: simulating crash");
+        tracing::info!(count = n, "crash-loop: index access");
+        if n.is_multiple_of(CRASH_EVERY) {
+            tracing::warn!(count = n, "crash-loop: simulating crash");
             IndexEffect::Exit(1)
         } else {
             let next_crash = (n / CRASH_EVERY + 1) * CRASH_EVERY;

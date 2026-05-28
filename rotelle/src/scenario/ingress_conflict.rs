@@ -1,11 +1,8 @@
-use std::sync::Mutex;
 use super::{ActivationParams, IndexEffect, Scenario};
+use std::sync::Mutex;
 
 const FAIL_EVERY: u32 = 3;
 
-/// Simulates routing conflicts caused by having both a LoadBalancer Service and an
-/// Ingress controller configured. Returns 502 on every 3rd GET / to reproduce the
-/// intermittent failures an operator would observe in this misconfiguration.
 pub struct IngressConflictScenario {
     request_count: Mutex<u32>,
 }
@@ -39,7 +36,7 @@ impl Scenario for IngressConflictScenario {
         let n = *count;
         tracing::info!(count = n, "ingress-conflict: index access");
 
-        if n % FAIL_EVERY == 0 {
+        if n.is_multiple_of(FAIL_EVERY) {
             tracing::warn!(count = n, "ingress-conflict: simulating 502 gateway error");
             IndexEffect::RespondWithStatus(502, gateway_error_html(n))
         } else {

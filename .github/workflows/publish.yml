@@ -38,14 +38,10 @@ jobs:
       - name: Install musl tools
         run: sudo apt-get install -y musl-tools
 
-      - uses: actions/cache@v4
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rotelle/target
-          key: ${{ runner.os }}-${{ matrix.arch }}-cargo-${{ hashFiles('rotelle/Cargo.lock') }}
-          restore-keys: ${{ runner.os }}-${{ matrix.arch }}-cargo-
+          workspaces: rotelle
+          key: ${{ matrix.arch }}
 
       - name: Build binary
         run: cargo build --release --target ${{ matrix.musl_target }}
@@ -90,3 +86,20 @@ jobs:
             --tag ${{ env.IMAGE }}:latest \
             ${{ env.IMAGE }}:${{ github.ref_name }}-amd64 \
             ${{ env.IMAGE }}:${{ github.ref_name }}-arm64
+
+  github-release:
+    needs: merge
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        run: |
+          gh release create ${{ github.ref_name }} \
+            --title "${{ github.ref_name }}" \
+            --generate-notes \
+            --latest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,10 +1,5 @@
 use super::{ActivationParams, IndexEffect, Scenario};
 
-/// Simulates a Service selector mismatch: the pod is healthy but no traffic reaches it.
-///
-/// Every GET / hangs the connection indefinitely. The control plane (/rotectl/*)
-/// is unaffected — you can still reset the scenario while connections are hung.
-/// Hung connections drain naturally when the client times out or resets.
 pub struct ServiceUnreachableScenario;
 
 impl ServiceUnreachableScenario {

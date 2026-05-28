@@ -1,3 +1,8 @@
+# NOTE: This manifest is supplementary maintainer infrastructure (Uptime Kuma — an
+# uptime monitoring tool). It is not part of Rotelle and not needed to use or
+# contribute to this project. It is kept here for convenience of the maintainers
+# who run it alongside Rotelle in their own cluster.
+
 # namespace.yaml
 apiVersion: v1
 kind: Namespace

@@ -54,19 +54,21 @@ run:
     mkdir -p tmp/data
     DATA_DIR=./tmp/data cargo run --manifest-path rotelle/Cargo.toml
 
-# Run a single failure file against the rotelle service.
-run-case FILE:
+# Run the hurl test for a single scenario (pass the scenario name, not the file path).
+run-scenario FILE:
     hurl \
       --variable rotelle_service_host={{rotelle_service_host}} \
-      tests/hurl-case/{{FILE}}.hurl
+      tests/hurl-scenario/{{FILE}}.hurl
 
-# Run hurl control-path test sequence against the rotelle service (future multitest sequence)
+# Run the control-path smoke test (check.hurl). For per-scenario tests use run-scenario.
 test-hurl:
     hurl \
       --test \
       --variable rotelle_service_host={{rotelle_service_host}} \
-      tests/hurl-case/check.hurl
+      tests/hurl-scenario/check.hurl
 
-# Full pipeline: build binary, build image, load into cluster, deploy
+# Full pipeline: build binary, build image, load into cluster, deploy.
+# NOTE: deploys to the 'rotelle' namespace (production-style manifest, not rotelle-dev).
+# For local dev iteration use `just deploy` instead.
 ship:
     scripts/load-rotelle.sh
