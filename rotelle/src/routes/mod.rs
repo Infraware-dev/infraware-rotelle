@@ -27,7 +27,6 @@ fn with_control(r: Route) -> Route {
 
 pub fn routes(mode: &Mode) -> Route {
     match mode {
-        Mode::Sim => with_sim(base()),
         Mode::Control => with_control(base()),
         Mode::Full => with_control(with_sim(base())),
     }

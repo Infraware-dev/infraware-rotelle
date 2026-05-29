@@ -85,12 +85,13 @@ load_image() {
 }
 
 deploy() {
-    local manifest="$REPO_ROOT/k8s/rotelle.yaml"
-    info "Applying manifests..."
-    kubectl apply -f "$manifest"
-
-    info "Waiting for rotelle deployment to roll out..."
+    info "Applying sim manifest..."
+    kubectl apply -f "$REPO_ROOT/k8s/rotelle.yaml"
     kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
+
+    info "Applying control pod manifest..."
+    kubectl apply -f "$REPO_ROOT/k8s/rotelle-control.yaml"
+    kubectl rollout status deployment/rotelle-control -n rotelle-system --timeout=60s
 }
 
 main() {
@@ -106,8 +107,9 @@ main() {
     deploy
 
     echo ""
-    info "Done. rotelle deployed to namespace 'rotelle'."
-    info "  kubectl port-forward -n rotelle svc/rotelle 8080:8080"
+    info "Done. Rotelle deployed."
+    info "  kubectl port-forward -n rotelle svc/rotelle 8080:8080 &"
+    info "  kubectl port-forward -n rotelle-system svc/rotelle-control 9090:9090 &"
 }
 
 main "$@"

@@ -6,7 +6,7 @@
 #
 #   HOST  optional base URL
 #         default: http://localhost:8080  (local dev: `just run` runs full mode on 8080)
-#         K8s:     http://localhost:9090  (control sidecar is port-forwarded on 9090)
+#         K8s:     http://localhost:9090  (control pod is port-forwarded on 9090)
 #   scenario  idle | check | crash-loop | oom-kill | missing-env-var | service-unreachable | ingress-conflict
 #
 # Examples (local dev):

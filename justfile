@@ -8,33 +8,43 @@ musl  := arch + "-unknown-linux-musl"
 _default:
     @just --list
 
-# Apply k8s manifests and wait for rollout
+# Apply k8s manifests (sim + control pod) and wait for rollout
 deploy: docker-build
     kubectl apply -f k8s/rotelle-dev.yaml
     kubectl rollout status deployment/rotelle -n rotelle-dev --timeout=60s
+    kubectl apply -f k8s/rotelle-control-dev.yaml
+    kubectl rollout status deployment/rotelle-control -n rotelle-system --timeout=60s
 
-# Delete using the k8s manifest (for a clean start)
+# Delete both sim and control pod manifests
 undeploy:
-    kubectl delete -f k8s/rotelle-dev.yaml
+    kubectl delete -f k8s/rotelle-dev.yaml --ignore-not-found
+    kubectl delete -f k8s/rotelle-control-dev.yaml --ignore-not-found
 
-# deploy using k8s manifest pointing to a built image
+# Deploy release manifests (sim + control pod)
 deploy-rel:
     kubectl apply -f k8s/rotelle.yaml
     kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
+    kubectl apply -f k8s/rotelle-control.yaml
+    kubectl rollout status deployment/rotelle-control -n rotelle-system --timeout=60s
 
-# Delete using the k8s manifest
+# Delete release manifests
 undeploy-rel:
-    kubectl delete -f k8s/rotelle.yaml
+    kubectl delete -f k8s/rotelle.yaml --ignore-not-found
+    kubectl delete -f k8s/rotelle-control.yaml --ignore-not-found
 
-# Restart pods to pick up a newly loaded image
+# Restart sim and control pods to pick up a newly loaded image
 restart:
     kubectl rollout restart deployment/rotelle -n rotelle-dev
     kubectl rollout status deployment/rotelle -n rotelle-dev --timeout=60s
+    kubectl rollout restart deployment/rotelle-control -n rotelle-system
+    kubectl rollout status deployment/rotelle-control -n rotelle-system --timeout=60s
 
 # Restart release pods
 restart-rel:
     kubectl rollout restart deployment/rotelle -n rotelle
     kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
+    kubectl rollout restart deployment/rotelle-control -n rotelle-system
+    kubectl rollout status deployment/rotelle-control -n rotelle-system --timeout=60s
 
 # Build the rotelle binary (musl) and Docker image
 docker-build:

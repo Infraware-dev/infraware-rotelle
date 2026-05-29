@@ -99,17 +99,23 @@ A background task wakes every `loop_time_secs` seconds and allocates `loop_amoun
 
 **What it simulates:** A deployment that exits on startup because a required environment variable is absent, causing CrashLoopBackOff.
 
-Activation stores the required variable name. The crash triggers on the next `GET /` (exits immediately if the variable is absent) or on pod restart via `on_resume` (exits before the server becomes ready). Adding the variable to the deployment fixes the scenario without a reset.
+Activation stores the required variable name. The crash triggers on `GET /` when `var_value` is empty — the pod exits and Kubernetes applies CrashLoopBackOff. The `/rotectl/*` endpoints remain accessible between crash cycles, so `var_value` can be set via the control pod while the pod is up.
 
 **Parameters:**
 
 | Field | Type | Default | Description |
 |---|---|---|---|
 | `required_var` | String | `REQUIRED_APP_SECRET` | Name of the environment variable to check |
+| `var_value` | String | `""` (empty) | Leave empty to trigger the crash; set to any value to simulate the var being present |
 
-**Activate:**
+**Activate** (triggers crash loop):
 ```json
 { "cmd": "set", "scenario": "missing-env-var", "required_var": "DATABASE_URL" }
+```
+
+**Fix** (set var_value to stop crashing — send via the control pod while the sim is up):
+```json
+{ "cmd": "set", "scenario": "missing-env-var", "required_var": "DATABASE_URL", "var_value": "postgres://..." }
 ```
 
 **`/rotectl/status` extras:**

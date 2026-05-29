@@ -26,11 +26,12 @@ You need: `kubectl` pointed at any cluster. No cluster yet? Clone the repo and r
 
 ```sh
 kubectl apply -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle.yaml
+kubectl apply -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle-control.yaml
 kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
 # Simulation surface
 kubectl port-forward -n rotelle svc/rotelle 8080:8080 &
-# Control panel — always accessible even during OOM kills or crash loops
-kubectl port-forward -n rotelle svc/rotelle-control 9090:9090 &
+# Control panel — separate pod in rotelle-system, stays up even during OOM kills or crash loops
+kubectl port-forward -n rotelle-system svc/rotelle-control 9090:9090 &
 ```
 
 Trigger your first failure scenario — a pod crash every 5 requests:

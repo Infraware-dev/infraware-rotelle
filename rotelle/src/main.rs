@@ -10,7 +10,6 @@ use scenario::idle::Idle;
 use state::{AppState, Mode, load_state};
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
 use tracing::{error, info, warn};
 
 #[tokio::main]
@@ -24,13 +23,15 @@ async fn main() -> Result<(), std::io::Error> {
         std::process::exit(1);
     }
 
-    let mode = match std::env::var("ROTELLE_MODE")
-        .unwrap_or_default()
-        .to_lowercase()
-        .as_str()
-    {
-        "sim" => Mode::Sim,
+    let mode_str = std::env::var("ROTELLE_MODE").unwrap_or_default();
+    let mode = match mode_str.to_lowercase().as_str() {
         "control" => Mode::Control,
+        "sim" => {
+            warn!(
+                "ROTELLE_MODE=sim is no longer supported — sim pods must expose the control API for the control pod to probe. Falling back to full mode."
+            );
+            Mode::Full
+        }
         _ => Mode::Full,
     };
 
@@ -52,7 +53,7 @@ async fn main() -> Result<(), std::io::Error> {
         .create(&scenario)
         .unwrap_or_else(|| Arc::new(Idle::new()));
 
-    // Only call on_resume in full/sim mode — the control container never runs the simulation.
+    // Only resume simulation in full mode — the control pod never runs scenarios.
     if mode != Mode::Control {
         initial.on_resume(&params);
     }
@@ -61,77 +62,26 @@ async fn main() -> Result<(), std::io::Error> {
         std::env::var("ROTELLE_CONTROL_URL").unwrap_or_else(|_| "/rotectl/control".to_string());
     let sim_url = std::env::var("ROTELLE_SIM_URL").unwrap_or_else(|_| "/".to_string());
 
+    let sim_api_url = std::env::var("ROTELLE_SIM_API_URL").unwrap_or_default();
+    if mode == Mode::Control && sim_api_url.is_empty() {
+        warn!(
+            "ROTELLE_SIM_API_URL is not set — control mode will not be able to reach the sim pod"
+        );
+    }
+
     let app_state = AppState {
         active_scenario: Arc::new(Mutex::new(initial)),
         active_params: Arc::new(Mutex::new(params)),
-        data_dir: data_dir.clone(),
         state_file: state_file.clone(),
         registry: Arc::new(registry),
         mode: mode.clone(),
         crashed: Arc::new(AtomicBool::new(false)),
         control_url,
         sim_url,
+        sim_api_url,
+        http_client: reqwest::Client::new(),
+        last_known_sim_status: Arc::new(Mutex::new(serde_json::Value::Object(Default::default()))),
     };
-
-    // ── Background tasks ─────────────────────────────────────────────────────
-
-    if mode == Mode::Sim {
-        // Poll state.json every 2 s and apply changes made by the control container.
-        {
-            let state = app_state.clone();
-            let path = state_file.clone();
-            tokio::spawn(async move {
-                let mut last = std::fs::read_to_string(&path).unwrap_or_default();
-                loop {
-                    tokio::time::sleep(Duration::from_secs(2)).await;
-                    let current = match std::fs::read_to_string(&path) {
-                        Ok(s) => s,
-                        Err(_) => continue,
-                    };
-                    if current == last {
-                        continue;
-                    }
-                    last = current;
-                    let (new_scenario, new_params) = load_state(&path);
-                    if let Some(s) = state.registry.create(&new_scenario) {
-                        info!(
-                            scenario = new_scenario,
-                            "sim: detected state change, applying"
-                        );
-                        state.apply_scenario(s, new_params);
-                    }
-                }
-            });
-        }
-
-        // Write sim_health file every 2 s as a heartbeat so the control sidecar can
-        // detect when this container goes down (stale file → "down" after 30 s).
-        // Crashes and recoveries are also written immediately via write_sim_health().
-        {
-            let state = app_state.clone();
-            let health_path = format!("{data_dir}/sim_health");
-            tokio::spawn(async move {
-                // Wait before the first write so a "crashed" file left by the previous
-                // process stays visible long enough for the control panel badge to catch
-                // it — even on a near-instant first CrashLoopBackOff restart.
-                tokio::time::sleep(Duration::from_secs(4)).await;
-                loop {
-                    use std::sync::atomic::Ordering;
-                    let status = if state.crashed.load(Ordering::SeqCst) {
-                        "crashed"
-                    } else {
-                        "ok"
-                    };
-                    if let Err(e) = std::fs::write(&health_path, status) {
-                        warn!(error = %e, "sim: failed to write sim_health file");
-                    }
-                    tokio::time::sleep(Duration::from_secs(2)).await;
-                }
-            });
-        }
-    }
-
-    // ── Server ───────────────────────────────────────────────────────────────
 
     let addr = format!("0.0.0.0:{port}");
     Server::new(TcpListener::bind(addr))

@@ -29,16 +29,24 @@ Deploy to any cluster reachable via `kubectl cluster-info`. No local build requi
 > The manifest uses `type: LoadBalancer`, which creates a public IP on cloud providers (EKS, GKE, AKS). If you're deploying to a shared cluster, change the Service type to `ClusterIP` in `k8s/rotelle.yaml` and use `kubectl port-forward` for access, or restrict the endpoint with a network policy.
 
 ```sh
+# Deploy the sim pod (namespace: rotelle) and the control pod (namespace: rotelle-system)
 kubectl apply -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle.yaml
+kubectl apply -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle-control.yaml
 kubectl rollout status deployment/rotelle -n rotelle --timeout=60s
+kubectl rollout status deployment/rotelle-control -n rotelle-system --timeout=60s
+
+# Port-forward both pods
 kubectl port-forward -n rotelle svc/rotelle 8080:8080 &
-kubectl port-forward -n rotelle svc/rotelle-control 9090:9090 &
+kubectl port-forward -n rotelle-system svc/rotelle-control 9090:9090 &
 ```
+
+The sim pod (port 8080) serves the simulation surface. The control pod (port 9090) is a separate pod in its own namespace that proxies commands to the sim over HTTP — it stays accessible even when the sim pod crashes or is OOMKilled.
 
 Tear down when done:
 
 ```sh
 kubectl delete -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle.yaml
+kubectl delete -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle-control.yaml
 ```
 
 ---
@@ -65,8 +73,8 @@ cd infraware-rotelle
 The script:
 1. Checks prerequisites and gives you install hints if anything is missing
 2. Creates a Kind cluster called `rotelle-test` (1 control-plane + 2 workers)
-3. Deploys the last published release from GHCR (not your local source)
-4. Opens a port-forward to `http://localhost:8080` — exits with a clear error if port 8080 is already in use
+3. Deploys the sim pod (`rotelle` namespace) and the control pod (`rotelle-system` namespace)
+4. Opens port-forwards: sim on `8080`, control pod on `9090`
 5. Activates your first failure scenario so you can see it live
 
 **Expected duration:** ~3–5 minutes (dominated by image pull on first run).
@@ -159,6 +167,7 @@ All `/rotectl/` endpoints stay responsive even when a simulation is crashing or 
 ```sh
 # Option A — remove Rotelle from your cluster
 kubectl delete -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle.yaml
+kubectl delete -f https://raw.githubusercontent.com/infraware-dev/infraware-rotelle/main/k8s/rotelle-control.yaml
 
 # Option B — delete the Kind cluster entirely
 kind delete cluster --name rotelle-test

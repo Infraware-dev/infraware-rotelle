@@ -25,15 +25,21 @@ spec:
           image: ghcr.io/infraware-dev/infraware-rotelle:v0.1.0
           imagePullPolicy: IfNotPresent
           env:
-            - name: ROTELLE_MODE
-              value: "sim"
             - name: DATA_DIR
               value: /data
-            - name: ROTELLE_CONTROL_URL
-              value: "http://localhost:9090/rotectl/control"
+            # Optional: set ROTELLE_CONTROL_URL to the external control pod URL so the
+            # "Control" nav link on the sim surface points to the crash-isolated pod.
+            # Example (port-forward): http://localhost:9090/rotectl/control
+            # Leave unset to use the sim pod's own built-in control panel (/rotectl/control).
           ports:
             - name: http
               containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /rotectl/health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
           livenessProbe:
             httpGet:
               path: /health
@@ -45,42 +51,6 @@ spec:
               memory: "32Mi"
             limits:
               memory: "64Mi"
-          volumeMounts:
-            - name: state
-              mountPath: /data
-
-        - name: rotelle-control
-          image: ghcr.io/infraware-dev/infraware-rotelle:v0.1.0
-          imagePullPolicy: IfNotPresent
-          env:
-            - name: ROTELLE_MODE
-              value: "control"
-            - name: ROTELLE_PORT
-              value: "9090"
-            - name: DATA_DIR
-              value: /data
-            - name: ROTELLE_SIM_URL
-              value: "http://localhost:8080"
-          ports:
-            - name: control
-              containerPort: 9090
-          readinessProbe:
-            httpGet:
-              path: /rotectl/health
-              port: control
-            initialDelaySeconds: 3
-            periodSeconds: 5
-          livenessProbe:
-            httpGet:
-              path: /rotectl/health
-              port: control
-            initialDelaySeconds: 5
-            periodSeconds: 10
-          resources:
-            requests:
-              memory: "32Mi"
-            limits:
-              memory: "256Mi"
           volumeMounts:
             - name: state
               mountPath: /data
@@ -114,18 +84,4 @@ spec:
     - name: http
       port: 8080
       targetPort: http
-  type: LoadBalancer
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: rotelle-control
-  namespace: rotelle
-spec:
-  selector:
-    app: rotelle
-  ports:
-    - name: control
-      port: 9090
-      targetPort: control
   type: LoadBalancer

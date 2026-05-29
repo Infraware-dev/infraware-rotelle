@@ -1,4 +1,4 @@
-use crate::state::AppState;
+use crate::state::{AppState, Mode};
 use poem::{
     handler,
     http::StatusCode,
@@ -25,8 +25,16 @@ pub fn control_health() -> &'static str {
 }
 
 /// Returns simulation health as JSON for the control panel's JS health polling.
-/// Status values: "ok", "crashed", "down" (OOMKilled / not running).
+/// In control mode: probes the sim pod's /health endpoint over HTTP.
+/// In full/sim mode: reads the in-process crashed flag.
 #[handler]
-pub fn sim_health_json(state: Data<&AppState>) -> Json<serde_json::Value> {
-    Json(serde_json::json!({ "status": state.sim_health_status() }))
+pub async fn sim_health_json(state: Data<&AppState>) -> Json<serde_json::Value> {
+    let status = if state.mode == Mode::Control {
+        state.probe_sim_health().await
+    } else if state.crashed.load(Ordering::SeqCst) {
+        "crashed".to_string()
+    } else {
+        "ok".to_string()
+    };
+    Json(serde_json::json!({ "status": status }))
 }

@@ -1,0 +1,81 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: rotelle-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rotelle-control
+  namespace: rotelle-system
+  labels:
+    app: rotelle-control
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rotelle-control
+  template:
+    metadata:
+      labels:
+        app: rotelle-control
+    spec:
+      containers:
+        - name: rotelle-control
+          image: rotelle:dev
+          imagePullPolicy: Never
+          env:
+            - name: ROTELLE_MODE
+              value: "control"
+            - name: ROTELLE_PORT
+              value: "9090"
+            - name: DATA_DIR
+              value: /data
+            # Internal cluster URL of the sim pod's API (rotelle-dev namespace).
+            - name: ROTELLE_SIM_API_URL
+              value: "http://rotelle.rotelle-dev.svc.cluster.local:8080"
+            # Browser-facing URL of the sim service — used for the "Status" nav link.
+            # Set to the port-forward address so the link works from the local browser.
+            - name: ROTELLE_SIM_URL
+              value: "http://localhost:8080"
+          ports:
+            - name: control
+              containerPort: 9090
+          readinessProbe:
+            httpGet:
+              path: /rotectl/health
+              port: control
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /rotectl/health
+              port: control
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "32Mi"
+            limits:
+              memory: "128Mi"
+          volumeMounts:
+            - name: data
+              mountPath: /data
+
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rotelle-control
+  namespace: rotelle-system
+spec:
+  selector:
+    app: rotelle-control
+  ports:
+    - name: control
+      port: 9090
+      targetPort: control
+  type: ClusterIP

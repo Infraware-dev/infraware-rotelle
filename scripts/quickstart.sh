@@ -23,12 +23,14 @@ CLUSTER_NAME="${KIND_CLUSTER_NAME:-rotelle-test}"
 GHCR_IMAGE="ghcr.io/infraware-dev/infraware-rotelle:latest"
 LOCAL_IMAGE="rotelle:dev"
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-PORT=8080
+SIM_PORT=8080
 CONTROL_PORT=9090
-PF_PID=""
+PF_SIM_PID=""
 PF_CONTROL_PID=""
 NAMESPACE=""
 MANIFEST=""
+CONTROL_MANIFEST=""
+SIM_API_URL=""
 
 # ── argument parsing ────────────────────────────────────────────────────────────
 for arg in "$@"; do
@@ -59,9 +61,12 @@ cleanup() {
       warn "If the failure was an image pull error, try: ./scripts/quickstart.sh --build-from-source"
     fi
   fi
-  if [[ -n "$PF_PID" ]] && kill -0 "$PF_PID" 2>/dev/null; then
-    info "Port-forward loops still running (PIDs $PF_PID, $PF_CONTROL_PID)."
-    info "To stop them: kill $PF_PID $PF_CONTROL_PID"
+  local pids=()
+  [[ -n "$PF_SIM_PID" ]]     && kill -0 "$PF_SIM_PID"     2>/dev/null && pids+=("$PF_SIM_PID")
+  [[ -n "$PF_CONTROL_PID" ]] && kill -0 "$PF_CONTROL_PID" 2>/dev/null && pids+=("$PF_CONTROL_PID")
+  if [[ ${#pids[@]} -gt 0 ]]; then
+    info "Port-forward loops still running (PIDs ${pids[*]})."
+    info "To stop them: kill ${pids[*]}"
   fi
 }
 trap cleanup EXIT
@@ -122,9 +127,6 @@ prepare_image() {
   if $BUILD_FROM_SOURCE; then
     step "Building Rotelle from source"
 
-    # Warn if the published-image deployment already exists in this cluster —
-    # both namespaces would run simultaneously and the port-forward below targets
-    # rotelle-dev, so localhost:8080 will show the locally built version.
     if kubectl get namespace rotelle &>/dev/null 2>&1; then
       warn "Namespace 'rotelle' already exists in this cluster (published-image deployment)."
       warn "This run will deploy to 'rotelle-dev' and port-forward there."
@@ -155,12 +157,12 @@ prepare_image() {
     kind load docker-image "$LOCAL_IMAGE" --name "$CLUSTER_NAME"
 
     MANIFEST="$REPO_ROOT/k8s/rotelle-dev.yaml"
+    CONTROL_MANIFEST="$REPO_ROOT/k8s/rotelle-control-dev.yaml"
     NAMESPACE="rotelle-dev"
+    SIM_API_URL="http://rotelle.rotelle-dev.svc.cluster.local:${SIM_PORT}"
   else
     step "Using published image from GHCR"
 
-    # Warn if the build-from-source deployment already exists — the port-forward
-    # targets 'rotelle', so localhost:8080 will show the published image version.
     if kubectl get namespace rotelle-dev &>/dev/null 2>&1; then
       warn "Namespace 'rotelle-dev' already exists in this cluster (build-from-source deployment)."
       warn "This run will deploy to 'rotelle' and port-forward there."
@@ -173,20 +175,21 @@ prepare_image() {
     warn "To run your local code instead: ./scripts/quickstart.sh --build-from-source"
 
     MANIFEST="$REPO_ROOT/k8s/rotelle.yaml"
+    CONTROL_MANIFEST="$REPO_ROOT/k8s/rotelle-control.yaml"
     NAMESPACE="rotelle"
+    SIM_API_URL="http://rotelle.rotelle.svc.cluster.local:${SIM_PORT}"
   fi
 }
 
-# ── deploy ──────────────────────────────────────────────────────────────────────
+# ── deploy sim ──────────────────────────────────────────────────────────────────
 deploy() {
-  step "Deploying Rotelle"
+  step "Deploying Rotelle (sim pod — namespace: $NAMESPACE)"
   info "Applying manifests…"
   kubectl apply -f "$MANIFEST"
 
   info "Waiting for rollout (up to 90 s)…"
   if ! kubectl rollout status deployment/rotelle -n "$NAMESPACE" --timeout=90s; then
     echo ""
-    # Check for ImagePullBackOff — the most common failure in the default (no --build-from-source) mode
     if kubectl get pods -n "$NAMESPACE" 2>/dev/null \
         | grep -qE "ImagePullBackOff|ErrImagePull"; then
       die "Pod failed to start: image pull error.
@@ -198,12 +201,23 @@ deploy() {
        kubectl get pods -n $NAMESPACE
        kubectl describe pod -n $NAMESPACE \$(kubectl get pods -n $NAMESPACE -o name | head -1)"
   fi
-  info "Rotelle is running in namespace '$NAMESPACE'."
+  info "Sim pod is running in namespace '$NAMESPACE'."
 }
 
-# ── port-forward ────────────────────────────────────────────────────────────────
-start_port_forward() {
-  step "Opening port-forwards → localhost:$PORT (sim) and localhost:$CONTROL_PORT (control)"
+# ── deploy control pod ──────────────────────────────────────────────────────────
+deploy_control_pod() {
+  step "Deploying control pod (namespace: rotelle-system)"
+  info "Applying manifest: $CONTROL_MANIFEST"
+  kubectl apply -f "$CONTROL_MANIFEST"
+
+  info "Waiting for control pod rollout (up to 60 s)…"
+  kubectl rollout status deployment/rotelle-control -n rotelle-system --timeout=60s
+  info "Control pod is running in namespace 'rotelle-system'."
+}
+
+# ── port-forwards ───────────────────────────────────────────────────────────────
+start_port_forwards() {
+  step "Opening port-forwards → localhost:$SIM_PORT (sim) and localhost:$CONTROL_PORT (control)"
 
   free_port_or_die() {
     local port="$1"
@@ -221,30 +235,30 @@ start_port_forward() {
     fi
   }
 
-  free_port_or_die "$PORT"
+  free_port_or_die "$SIM_PORT"
   free_port_or_die "$CONTROL_PORT"
 
   # Run each port-forward in a loop so it reconnects automatically when the sim
-  # container restarts (e.g. after a crash-loop or OOM-kill scenario).
+  # pod restarts (e.g. after a crash-loop or OOM-kill scenario).
   (
     trap 'kill $(jobs -p) 2>/dev/null' EXIT
     while true; do
-      kubectl port-forward -n "$NAMESPACE" svc/rotelle "${PORT}:${PORT}" >/dev/null 2>&1 || true
+      kubectl port-forward -n "$NAMESPACE" svc/rotelle "${SIM_PORT}:${SIM_PORT}" >/dev/null 2>&1 || true
       sleep 1
     done
   ) &
-  PF_PID=$!
+  PF_SIM_PID=$!
 
   (
     trap 'kill $(jobs -p) 2>/dev/null' EXIT
     while true; do
-      kubectl port-forward -n "$NAMESPACE" svc/rotelle-control "${CONTROL_PORT}:${CONTROL_PORT}" >/dev/null 2>&1 || true
+      kubectl port-forward -n rotelle-system svc/rotelle-control "${CONTROL_PORT}:${CONTROL_PORT}" >/dev/null 2>&1 || true
       sleep 1
     done
   ) &
   PF_CONTROL_PID=$!
 
-  # Wait for the control plane to become ready (it starts fast and is never crashed)
+  # Wait for the control pod to become ready — it doesn't crash so this is reliable.
   local ready=false
   for _ in 1 2 3 4 5; do
     sleep 1
@@ -255,12 +269,12 @@ start_port_forward() {
   done
 
   if ! $ready; then
-    warn "Port-forward may not be ready yet. If the demo fails, run manually:"
-    warn "  kubectl port-forward -n $NAMESPACE svc/rotelle ${PORT}:${PORT} &"
-    warn "  kubectl port-forward -n $NAMESPACE svc/rotelle-control ${CONTROL_PORT}:${CONTROL_PORT} &"
+    warn "Port-forwards may not be ready yet. If the demo fails, run manually:"
+    warn "  kubectl port-forward -n $NAMESPACE svc/rotelle ${SIM_PORT}:${SIM_PORT} &"
+    warn "  kubectl port-forward -n rotelle-system svc/rotelle-control ${CONTROL_PORT}:${CONTROL_PORT} &"
   else
-    info "Simulation  → http://localhost:${PORT}"
-    info "Control     → http://localhost:${CONTROL_PORT}/rotectl/control"
+    info "Sim surface  → http://localhost:${SIM_PORT}"
+    info "Control pod  → http://localhost:${CONTROL_PORT}/rotectl/control"
   fi
 }
 
@@ -268,12 +282,12 @@ start_port_forward() {
 run_demo() {
   step "Running your first failure scenario"
   echo ""
-  echo "  Rotelle ships with 5 built-in failure scenarios."
-  echo "  Let's activate one and observe the control API."
+  echo "  The control pod (port ${CONTROL_PORT}) proxies commands to the sim pod (port ${SIM_PORT})."
+  echo "  Let's activate a scenario and observe both."
   echo ""
 
   hr
-  echo -e "  ${CYAN}1. Check current status — should be idle:${NC}"
+  echo -e "  ${CYAN}1. Check current status via control pod — should be idle:${NC}"
   hr
   echo -n "  \$ curl http://localhost:${CONTROL_PORT}/rotectl/status"
   echo ""
@@ -281,7 +295,7 @@ run_demo() {
   echo ""
 
   hr
-  echo -e "  ${CYAN}2. Activate 'crash-loop' — crash every 5th request:${NC}"
+  echo -e "  ${CYAN}2. Activate 'crash-loop' via control pod — crash every 5th request:${NC}"
   hr
   echo "  \$ curl -X POST http://localhost:${CONTROL_PORT}/rotectl/cmd \\"
   echo "      -H 'Content-Type: application/json' \\"
@@ -293,11 +307,11 @@ run_demo() {
   echo ""
 
   hr
-  echo -e "  ${CYAN}3. Drive 4 requests — the 5th would crash the pod:${NC}"
+  echo -e "  ${CYAN}3. Drive 4 requests to the sim pod — the 5th would crash it:${NC}"
   hr
   for i in 1 2 3 4; do
     echo -n "  Request $i: "
-    curl -sf --max-time 5 "http://localhost:${PORT}/" \
+    curl -sf --max-time 5 "http://localhost:${SIM_PORT}/" \
       | grep -o '<title>[^<]*</title>' \
       | sed 's/<[^>]*>//g' \
       || echo "(no title)"
@@ -306,13 +320,13 @@ run_demo() {
   echo ""
 
   hr
-  echo -e "  ${CYAN}4. Status now shows access_count and crash_every:${NC}"
+  echo -e "  ${CYAN}4. Status via control pod — shows access_count and crash_every:${NC}"
   hr
   curl -sf "http://localhost:${CONTROL_PORT}/rotectl/status" && echo
   echo ""
 
   hr
-  echo -e "  ${CYAN}5. Reset to idle:${NC}"
+  echo -e "  ${CYAN}5. Reset via control pod:${NC}"
   hr
   curl -sf -X POST "http://localhost:${CONTROL_PORT}/rotectl/cmd" \
     -H 'Content-Type: application/json' \
@@ -329,15 +343,15 @@ print_summary() {
   echo ""
   local running_image
   running_image=$(kubectl get pod -n "$NAMESPACE" -o jsonpath='{.items[0].spec.containers[0].image}' 2>/dev/null || echo "unknown")
-  echo -e "  Simulation   →  ${CYAN}http://localhost:${PORT}${NC}"
-  echo -e "  Control panel→  ${CYAN}http://localhost:${CONTROL_PORT}/rotectl/control${NC}"
-  echo -e "  Control API  →  ${CYAN}http://localhost:${CONTROL_PORT}/rotectl/status${NC}"
+  echo -e "  Sim surface  →  ${CYAN}http://localhost:${SIM_PORT}${NC}                  (namespace: $NAMESPACE)"
+  echo -e "  Control panel→  ${CYAN}http://localhost:${CONTROL_PORT}/rotectl/control${NC}   (namespace: rotelle-system)"
+  echo -e "  Control API  →  ${CYAN}http://localhost:${CONTROL_PORT}/rotectl/status${NC}    (namespace: rotelle-system)"
   echo -e "  Running image→  ${CYAN}${running_image}${NC}"
   echo -e "  Next steps   →  ${CYAN}ONBOARDING.md${NC}"
   echo -e "  All scenarios →  ${CYAN}docs/scenarios.md${NC}"
   echo ""
-  echo -e "  Port-forwards running in background (PIDs $PF_PID, $PF_CONTROL_PID)."
-  echo -e "  To stop:      ${YELLOW}kill $PF_PID $PF_CONTROL_PID${NC}"
+  echo -e "  Port-forwards running in background (PIDs $PF_SIM_PID $PF_CONTROL_PID)."
+  echo -e "  To stop:      ${YELLOW}kill $PF_SIM_PID $PF_CONTROL_PID${NC}"
   echo -e "  To tear down: ${YELLOW}kind delete cluster --name $CLUSTER_NAME${NC}"
   echo ""
 }
@@ -359,7 +373,8 @@ main() {
   setup_cluster
   prepare_image
   deploy
-  start_port_forward
+  deploy_control_pod
+  start_port_forwards
   run_demo
   print_summary
 }

@@ -1,7 +1,7 @@
 use crate::scenario::ActivationParams;
 use crate::scenario::check::Check;
 use crate::scenario::idle::Idle;
-use crate::state::AppState;
+use crate::state::{AppState, Mode};
 use poem::{
     handler,
     http::StatusCode,
@@ -39,7 +39,15 @@ struct Cmd {
 }
 
 #[handler]
-pub fn cmd(state: Data<&AppState>, Json(body): Json<Cmd>) -> CmdResponse {
+pub async fn cmd(state: Data<&AppState>, Json(raw): Json<serde_json::Value>) -> CmdResponse {
+    if state.mode == Mode::Control {
+        return proxy_to_sim(&state, raw).await;
+    }
+
+    let body: Cmd = match serde_json::from_value(raw) {
+        Ok(c) => c,
+        Err(e) => return err(format!("invalid request: {e}")),
+    };
     let params = ActivationParams::from(body.params);
 
     match body.cmd.as_str() {
@@ -65,5 +73,26 @@ pub fn cmd(state: Data<&AppState>, Json(body): Json<Cmd>) -> CmdResponse {
             ok(name)
         }
         unknown => err(format!("unknown cmd: {unknown}")),
+    }
+}
+
+async fn proxy_to_sim(state: &AppState, body: serde_json::Value) -> CmdResponse {
+    let url = format!("{}/rotectl/cmd", state.sim_api_url);
+    match state.http_client.post(&url).json(&body).send().await {
+        Ok(resp) => {
+            let status = if resp.status().is_success() {
+                StatusCode::OK
+            } else {
+                StatusCode::BAD_GATEWAY
+            };
+            let json: serde_json::Value = resp.json().await.unwrap_or_else(
+                |_| serde_json::json!({"ok": false, "error": "invalid response from sim"}),
+            );
+            (status, Json(json))
+        }
+        Err(e) => (
+            StatusCode::BAD_GATEWAY,
+            Json(serde_json::json!({"ok": false, "error": format!("sim unreachable: {e}")})),
+        ),
     }
 }
