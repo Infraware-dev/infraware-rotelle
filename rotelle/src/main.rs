@@ -23,7 +23,11 @@ async fn main() -> Result<(), std::io::Error> {
         std::process::exit(1);
     }
 
-    let mode = match std::env::var("ROTELLE_MODE").unwrap_or_default().to_lowercase().as_str() {
+    let mode = match std::env::var("ROTELLE_MODE")
+        .unwrap_or_default()
+        .to_lowercase()
+        .as_str()
+    {
         "control" => Mode::Control,
         _ => Mode::Full,
     };

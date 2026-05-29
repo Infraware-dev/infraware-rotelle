@@ -1,9 +1,9 @@
 use crate::core::registry::ScenarioRegistry;
 use crate::core::{ActivationParams, Scenario};
+use serde_json::Value;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
-use serde_json::Value;
 
 /// Runtime mode — set via the `ROTELLE_MODE` environment variable.
 /// - `full` (default): simulation surface + control plane in a single process on one port.
