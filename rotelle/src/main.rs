@@ -10,7 +10,7 @@ use scenario::idle::Idle;
 use state::{AppState, Mode, load_state};
 use std::sync::atomic::AtomicBool;
 use std::sync::{Arc, Mutex};
-use tracing::{error, info, warn};
+use tracing::{error, info};
 
 #[tokio::main]
 async fn main() -> Result<(), std::io::Error> {
@@ -23,15 +23,8 @@ async fn main() -> Result<(), std::io::Error> {
         std::process::exit(1);
     }
 
-    let mode_str = std::env::var("ROTELLE_MODE").unwrap_or_default();
-    let mode = match mode_str.to_lowercase().as_str() {
+    let mode = match std::env::var("ROTELLE_MODE").unwrap_or_default().to_lowercase().as_str() {
         "control" => Mode::Control,
-        "sim" => {
-            warn!(
-                "ROTELLE_MODE=sim is no longer supported — sim pods must expose the control API for the control pod to probe. Falling back to full mode."
-            );
-            Mode::Full
-        }
         _ => Mode::Full,
     };
 
@@ -64,7 +57,7 @@ async fn main() -> Result<(), std::io::Error> {
 
     let sim_api_url = std::env::var("ROTELLE_SIM_API_URL").unwrap_or_default();
     if mode == Mode::Control && sim_api_url.is_empty() {
-        warn!(
+        error!(
             "ROTELLE_SIM_API_URL is not set — control mode will not be able to reach the sim pod"
         );
     }

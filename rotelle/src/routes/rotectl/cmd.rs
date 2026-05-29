@@ -40,6 +40,9 @@ struct Cmd {
 
 #[handler]
 pub async fn cmd(state: Data<&AppState>, Json(raw): Json<serde_json::Value>) -> CmdResponse {
+    // In control mode this pod never runs scenarios directly — forward the
+    // request to the sim pod so the control panel stays usable even when the
+    // sim is crashing or restarting.
     if state.mode == Mode::Control {
         return proxy_to_sim(&state, raw).await;
     }
