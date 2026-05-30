@@ -1,0 +1,5 @@
+# rust-lld ships with the Rust toolchain and avoids needing a system cross-linker
+# (e.g. aarch64-linux-musl-gcc) when cross-compiling on macOS Apple Silicon.
+# On Linux ARM hosts this is typically not needed but is harmless.
+[target.aarch64-unknown-linux-musl]
+linker = "rust-lld"

@@ -1,0 +1,13 @@
+.git
+.github/
+tmp/
+docs/
+tests/
+scripts/
+k8s/
+*.md
+.env
+.env.example
+.gitignore
+justfile
+development.md

@@ -1,0 +1,19 @@
+[package]
+name = "rotelle"
+version = "0.1.0"
+edition = "2024"
+description = "Simulate Kubernetes failure scenarios on demand — for SRE training and AI evaluation"
+repository = "https://github.com/infraware-dev/infraware-rotelle"
+homepage = "https://github.com/infraware-dev/infraware-rotelle"
+license = "Apache-2.0"
+keywords = ["kubernetes", "chaos-engineering", "sre", "testing", "simulation"]
+categories = ["development-tools::testing"]
+
+[dependencies]
+poem = "3.1.12"
+reqwest = { version = "0.12", default-features = false, features = ["json"] }
+tokio = { version = "1.50.0", features = ["rt-multi-thread", "macros", "time"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
