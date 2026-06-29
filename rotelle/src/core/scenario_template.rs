@@ -147,12 +147,11 @@ const SHARED_CSS: &str = r#"
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      background: #f0f2fe;
-      color: #0f0f1e;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
+      background: #0C0C0E;
+      color: #F4F5F7;
       min-height: 100vh;
       padding: 4.5rem 2.5rem;
-      background-image: radial-gradient(ellipse 60% 50% at 75% -5%, rgba(99,102,241,0.15) 0%, transparent 60%);
     }
 
     .container {
@@ -166,18 +165,18 @@ const SHARED_CSS: &str = r#"
       align-items: center;
       gap: 1.1rem;
     }
-    .logo-img { height: 64px; width: auto; }
+    .logo-img { height: 64px; width: auto; filter: invert(1); }
     .logo-divider {
       width: 1px;
       height: 36px;
-      background: rgba(55,48,163,0.2);
+      background: #2A2A2D;
       flex-shrink: 0;
     }
     .logo-subtitle {
       font-size: 1.1rem;
       text-transform: uppercase;
       letter-spacing: 0.2em;
-      color: #9090c0;
+      color: #85868C;
       font-weight: 700;
     }
 
@@ -185,56 +184,52 @@ const SHARED_CSS: &str = r#"
     .nav-link {
       font-size: 0.85rem;
       font-weight: 600;
-      color: #5c5c90;
+      color: #85868C;
       text-decoration: none;
       padding: 0.4em 1.1em;
       border-radius: 20px;
       letter-spacing: 0.03em;
-      border: 1.5px solid rgba(99,102,241,0.18);
-      background: rgba(99,102,241,0.04);
-      transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+      border: 1.5px solid #2A2A2D;
+      background: transparent;
+      transition: background 0.15s, color 0.15s, border-color 0.15s;
     }
     .nav-link:hover {
-      background: rgba(99,102,241,0.1);
-      color: #3730a3;
-      border-color: rgba(99,102,241,0.35);
+      background: rgba(255,255,255,0.04);
+      color: #C8C9CD;
+      border-color: #54555C;
     }
     .nav-link.nav-active {
-      background: #3730a3;
-      color: #fff;
-      border-color: #3730a3;
-      box-shadow: 0 2px 8px rgba(55,48,163,0.22);
+      background: #2A2A2D;
+      color: #ECEDF0;
+      border-color: #2A2A2D;
     }
     .nav-link.nav-active:hover {
-      background: #2e27a0;
-      border-color: #2e27a0;
+      background: #2A2A2D;
+      border-color: #54555C;
     }
 
     .card {
-      background: #ffffff;
-      border: 1px solid rgba(0,0,0,0.08);
-      border-radius: 20px;
+      background: #161618;
+      border: 1px solid #2A2A2D;
+      border-radius: 12px;
       overflow: visible;
-      box-shadow:
-        0 1px 3px rgba(0,0,0,0.06),
-        0 12px 40px rgba(99,102,241,0.1),
-        0 40px 80px rgba(0,0,0,0.07);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.5);
     }
 
     .card-header {
       padding: 1.5rem 2.5rem;
-      border-bottom: 1px solid rgba(0,0,0,0.06);
+      border-bottom: 1px solid #2A2A2D;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #fafbff;
-      border-radius: 20px 20px 0 0;
+      background: #111113;
+      border-radius: 12px 12px 0 0;
     }
     .card-label {
       font-size: 0.9rem;
       text-transform: uppercase;
       letter-spacing: 0.12em;
-      color: #7070a0;
+      color: #74757B;
       font-weight: 700;
     }
     .status-pill {
@@ -261,7 +256,7 @@ const SHARED_CSS: &str = r#"
       font-size: 0.875rem;
       text-transform: uppercase;
       letter-spacing: 0.12em;
-      color: #8888b8;
+      color: #74757B;
       font-weight: 700;
       margin-bottom: 0.65rem;
     }
@@ -269,47 +264,47 @@ const SHARED_CSS: &str = r#"
       font-size: 1.85rem;
       font-weight: 700;
       letter-spacing: -0.02em;
-      color: #3730a3;
+      color: #ECEDF0;
       line-height: 1.15;
       font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
       margin-bottom: 0.6rem;
     }
-    .scenario-description { font-size: 1rem; color: #6868a0; line-height: 1.5; }
+    .scenario-description { font-size: 1rem; color: #85868C; line-height: 1.5; }
 
     .details-section {
       margin-top: 1.75rem;
       padding-top: 1.75rem;
-      border-top: 1px solid rgba(0,0,0,0.06);
+      border-top: 1px solid #2A2A2D;
     }
     .details-section:has(.card-extra:empty) { display: none; }
     .details-label {
       font-size: 0.875rem;
       text-transform: uppercase;
       letter-spacing: 0.12em;
-      color: #8888b8;
+      color: #74757B;
       font-weight: 700;
       margin-bottom: 0.65rem;
     }
-    .card-extra { color: #2e2e6a; font-size: 1.2rem; font-weight: 500; line-height: 1.75; }
+    .card-extra { color: #C8C9CD; font-size: 1.2rem; font-weight: 500; line-height: 1.75; }
     .card-extra p { margin: 0; }
-    .card-extra strong { color: #0f0f1e; font-weight: 600; }
+    .card-extra strong { color: #F4F5F7; font-weight: 600; }
     .card-extra code {
       font-family: 'SF Mono', ui-monospace, monospace;
       font-size: 0.9em;
-      background: rgba(99,102,241,0.07);
-      border: 1px solid rgba(99,102,241,0.15);
+      background: rgba(255,255,255,0.06);
+      border: 1px solid #2A2A2D;
       border-radius: 5px;
       padding: 0.15em 0.45em;
-      color: #4338ca;
+      color: #C8C9CD;
     }
 
     .card-footer {
       padding: 1.25rem 2.5rem;
-      border-top: 1px solid rgba(0,0,0,0.06);
-      background: #fafbff;
-      border-radius: 0 0 20px 20px;
+      border-top: 1px solid #2A2A2D;
+      background: #111113;
+      border-radius: 0 0 12px 12px;
     }
-    .footer-text { font-size: 0.9rem; color: #5c5c88; letter-spacing: 0.02em; }
+    .footer-text { font-size: 0.9rem; color: #74757B; letter-spacing: 0.02em; }
 "#;
 
 // ── Control-page styles ───────────────────────────────────────────────────────
@@ -318,13 +313,13 @@ const CONTROL_CSS: &str = r#"
     .section-divider {
       margin-top: 1.75rem;
       padding-top: 1.75rem;
-      border-top: 1px solid rgba(0,0,0,0.06);
+      border-top: 1px solid #2A2A2D;
     }
     .switch-label {
       font-size: 0.875rem;
       text-transform: uppercase;
       letter-spacing: 0.12em;
-      color: #8888b8;
+      color: #74757B;
       font-weight: 700;
       margin-bottom: 1rem;
     }
@@ -395,23 +390,23 @@ const CONTROL_CSS: &str = r#"
       padding: 0.65em 1em;
       font-size: 0.9rem;
       font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
-      color: #3730a3;
-      background: #fafbff;
-      border: 1.5px solid rgba(99,102,241,0.2);
-      border-radius: 10px;
+      color: #C8C9CD;
+      background: #0C0C0E;
+      border: 1.5px solid #2A2A2D;
+      border-radius: 8px;
       outline: none;
       cursor: pointer;
       text-align: left;
       transition: border-color 0.15s, box-shadow 0.15s, border-radius 0.1s;
     }
-    .combobox-trigger:hover { border-color: rgba(99,102,241,0.4); }
+    .combobox-trigger:hover { border-color: #54555C; }
     .combobox-trigger.is-open {
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99,102,241,0.1);
+      border-color: #54555C;
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.05);
       border-bottom-left-radius: 0;
       border-bottom-right-radius: 0;
     }
-    .combobox-chevron { color: #9090c0; transition: transform 0.15s; flex-shrink: 0; }
+    .combobox-chevron { color: #5A5B61; transition: transform 0.15s; flex-shrink: 0; }
     .combobox-trigger.is-open .combobox-chevron { transform: rotate(180deg); }
     .combobox-panel {
       position: absolute;
@@ -419,17 +414,17 @@ const CONTROL_CSS: &str = r#"
       left: 0;
       right: 0;
       z-index: 20;
-      background: #fff;
-      border: 1.5px solid #6366f1;
+      background: #161618;
+      border: 1.5px solid #54555C;
       border-top: none;
-      border-bottom-left-radius: 10px;
-      border-bottom-right-radius: 10px;
-      box-shadow: 0 8px 28px rgba(99,102,241,0.14);
+      border-bottom-left-radius: 8px;
+      border-bottom-right-radius: 8px;
+      box-shadow: 0 8px 28px rgba(0,0,0,0.5);
       overflow: hidden;
     }
     .combobox-search-wrap {
       padding: 0.5rem;
-      border-bottom: 1px solid rgba(0,0,0,0.06);
+      border-bottom: 1px solid #2A2A2D;
       position: relative;
     }
     .combobox-search-icon {
@@ -439,7 +434,7 @@ const CONTROL_CSS: &str = r#"
       transform: translateY(-50%);
       width: 14px;
       height: 14px;
-      color: #9090c0;
+      color: #5A5B61;
       pointer-events: none;
     }
     .combobox-search {
@@ -447,14 +442,14 @@ const CONTROL_CSS: &str = r#"
       padding: 0.45em 0.75em 0.45em 2.1em;
       font-size: 0.85rem;
       font-family: inherit;
-      color: #0f0f1e;
-      background: #f5f6ff;
-      border: 1px solid rgba(99,102,241,0.15);
-      border-radius: 7px;
+      color: #C8C9CD;
+      background: #0C0C0E;
+      border: 1px solid #2A2A2D;
+      border-radius: 6px;
       outline: none;
-      transition: background 0.1s, border-color 0.1s;
+      transition: border-color 0.1s;
     }
-    .combobox-search:focus { background: #fff; border-color: rgba(99,102,241,0.3); }
+    .combobox-search:focus { border-color: #54555C; }
     .combobox-list {
       max-height: 280px;
       overflow-y: auto;
@@ -462,17 +457,17 @@ const CONTROL_CSS: &str = r#"
     }
     .combobox-option {
       padding: 0.65rem 0.85rem;
-      border-radius: 7px;
+      border-radius: 6px;
       cursor: pointer;
       transition: background 0.1s;
     }
-    .combobox-option:hover { background: rgba(99,102,241,0.06); }
-    .combobox-option.is-selected { background: rgba(99,102,241,0.09); }
+    .combobox-option:hover { background: rgba(255,255,255,0.04); }
+    .combobox-option.is-selected { background: rgba(255,255,255,0.07); }
     .combobox-option-name {
       font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
       font-size: 0.875rem;
       font-weight: 700;
-      color: #3730a3;
+      color: #ECEDF0;
       margin-bottom: 0.2rem;
       display: flex;
       align-items: center;
@@ -486,56 +481,56 @@ const CONTROL_CSS: &str = r#"
       background: #16a34a;
       flex-shrink: 0;
     }
-    .combobox-option-desc { font-size: 0.78rem; color: #6868a0; line-height: 1.35; }
+    .combobox-option-desc { font-size: 0.78rem; color: #85868C; line-height: 1.35; }
     .combobox-no-results {
       padding: 1rem;
       text-align: center;
-      color: #9090c0;
+      color: #5A5B61;
       font-size: 0.85rem;
     }
 
     /* Param inputs */
-    .params-for { font-weight: 500; text-transform: none; letter-spacing: 0; color: #4338ca; font-family: 'SF Mono', ui-monospace, monospace; font-size: 0.8rem; }
+    .params-for { font-weight: 500; text-transform: none; letter-spacing: 0; color: #85868C; font-family: 'SF Mono', ui-monospace, monospace; font-size: 0.8rem; }
     .params-section {
       margin-bottom: 1.25rem;
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
       padding: 1rem 1.25rem;
-      background: #f5f6ff;
-      border: 1px solid rgba(99,102,241,0.12);
-      border-radius: 10px;
+      background: #111113;
+      border: 1px solid #2A2A2D;
+      border-radius: 8px;
     }
     .param-row { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
     .param-label {
       font-size: 0.8rem;
       font-family: 'SF Mono', ui-monospace, monospace;
-      color: #4338ca;
+      color: #85868C;
       font-weight: 600;
       min-width: 130px;
     }
     .param-input {
       font-size: 0.875rem;
       font-family: 'SF Mono', ui-monospace, monospace;
-      color: #0f0f1e;
-      background: #ffffff;
-      border: 1.5px solid rgba(99,102,241,0.25);
-      border-radius: 7px;
+      color: #C8C9CD;
+      background: #0C0C0E;
+      border: 1.5px solid #2A2A2D;
+      border-radius: 6px;
       padding: 0.3em 0.6em;
       outline: none;
       transition: border-color 0.15s, box-shadow 0.15s;
     }
-    .param-input:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99,102,241,0.12); }
+    .param-input:focus { border-color: #54555C; box-shadow: 0 0 0 3px rgba(255,255,255,0.05); }
 
     /* Submit & feedback */
     .form-footer { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
     .submit-btn {
       display: inline-flex;
       align-items: center;
-      background: #3730a3;
-      color: #ffffff;
+      background: #ECEDF0;
+      color: #0C0C0E;
       border: none;
-      border-radius: 10px;
+      border-radius: 8px;
       padding: 0.65em 1.6em;
       font-size: 0.9rem;
       font-weight: 700;
@@ -544,27 +539,27 @@ const CONTROL_CSS: &str = r#"
       font-family: inherit;
       transition: background 0.15s, transform 0.08s;
     }
-    .submit-btn:hover { background: #4338ca; }
+    .submit-btn:hover { background: #F4F5F7; }
     .submit-btn:active { transform: scale(0.97); }
-    .submit-btn:disabled { opacity: 0.55; cursor: default; transform: none; }
+    .submit-btn:disabled { opacity: 0.4; cursor: default; transform: none; }
     .submit-btn-outline {
       display: inline-flex;
       align-items: center;
       background: transparent;
-      color: #3730a3;
-      border: 1.5px solid #3730a3;
-      border-radius: 10px;
+      color: #C8C9CD;
+      border: 1.5px solid #2A2A2D;
+      border-radius: 8px;
       padding: 0.62em 1.6em;
       font-size: 0.9rem;
       font-weight: 700;
       letter-spacing: 0.02em;
       cursor: pointer;
       font-family: inherit;
-      transition: background 0.15s, color 0.15s, transform 0.08s;
+      transition: background 0.15s, border-color 0.15s, transform 0.08s;
     }
-    .submit-btn-outline:hover { background: rgba(55,48,163,0.06); }
+    .submit-btn-outline:hover { background: rgba(255,255,255,0.04); border-color: #54555C; }
     .submit-btn-outline:active { transform: scale(0.97); }
-    .submit-btn-outline:disabled { opacity: 0.55; cursor: default; transform: none; }
+    .submit-btn-outline:disabled { opacity: 0.4; cursor: default; transform: none; }
     .feedback {
       font-size: 0.875rem;
       font-weight: 600;
