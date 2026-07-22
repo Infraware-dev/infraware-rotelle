@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "observability-gp-mini.otelGateway.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "observability-gp-mini.componentLabels" (dict "ctx" . "component" "otel-gateway") | nindent 4 }}
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "observability-gp-mini.componentSelectorLabels" (dict "ctx" . "component" "otel-gateway") | nindent 4 }}
+  ports:
+    - name: otlp-http
+      port: 4318
+      targetPort: otlp-http
+      protocol: TCP

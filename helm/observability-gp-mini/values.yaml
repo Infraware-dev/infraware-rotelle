@@ -1,0 +1,435 @@
+# Default values for observability-gp-mini: a minimal reference observability
+# stack built around gigapipe (qryn) — OTLP metrics/logs ingestion, backed by
+# a bundled ClickHouse, plus Kubernetes events and node-level telemetry
+# (container logs, host metrics, kubelet stats) shipped into it.
+#
+# Not fit for production as shipped: single replicas, no auth on gigapipe or
+# ClickHouse, and ClickHouse defaults to emptyDir. It exists to give a demo or
+# training cluster something to point OTLP/metrics/logs/events at with one
+# `helm install`, not to be a production observability backend.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# ---------------------------------------------------------------------------
+# gigapipe (dependency: https://metrico.github.io/gigapipe-helm/)
+# ---------------------------------------------------------------------------
+# Ingests OTLP/HTTP logs and traces directly on its service port (3100) — but
+# not metrics; gigapipe has no OTLP metrics receiver, only Prometheus
+# remote-write (see otelGateway below, which exists solely to bridge that
+# gap). Swap the logs/traces endpoint for an external collector by setting
+# otel.endpoint below.
+gigapipe:
+  enabled: true
+
+  # Pins the Service name so every other component's hardcoded
+  # "http://gigapipe:..." address (below, and in otelGateway/
+  # otelNodeCollector/k8sEventsExporter's own config) stays correct. Without
+  # it the name is release-dependent.
+  fullnameOverride: gigapipe
+
+  service:
+    type: ClusterIP
+    port: 3100
+
+  # gigapipe defaults to CLICKHOUSE_SERVER=localhost and ships env: {} — it
+  # will not work until pointed at a real ClickHouse. These match the one
+  # this chart's own templates/clickhouse.yaml provisions.
+  env:
+    CLICKHOUSE_SERVER: clickhouse
+    CLICKHOUSE_PORT: "9000"
+    CLICKHOUSE_DB: gigapipe
+    # user:password — the bundled ClickHouse runs as `default` with no password.
+    CLICKHOUSE_AUTH: "default:"
+    CLICKHOUSE_PROTO: tcp
+
+# ---------------------------------------------------------------------------
+# OTLP endpoint
+# ---------------------------------------------------------------------------
+otel:
+  # Empty means "use the in-stack gigapipe". Set this to point the stack at
+  # an external collector instead, e.g. http://otel-collector.observability:4318
+  endpoint: ""
+
+# ---------------------------------------------------------------------------
+# ClickHouse (this chart's own templates/clickhouse.yaml)
+# ---------------------------------------------------------------------------
+# Single node, no auth, no replication, emptyDir. Deliberately minimal: it
+# exists so gigapipe has somewhere to write. Point gigapipe at a real cluster
+# and disable this for anything else.
+clickhouse:
+  enabled: true
+  image: clickhouse/clickhouse-server:24.8-alpine
+  service:
+    port: 9000
+    httpPort: 8123
+  persistence:
+    enabled: false
+    size: 8Gi
+    storageClass: ""
+  resources:
+    requests:
+      cpu: 200m
+      memory: 512Mi
+    limits:
+      memory: 2Gi
+
+# ---------------------------------------------------------------------------
+# otel-gateway
+# ---------------------------------------------------------------------------
+# A minimal upstream OpenTelemetry Collector (otel/opentelemetry-collector-contrib
+# — not metrico's larger, ClickHouse-native fork) doing exactly one job:
+# translate OTLP metrics into the Prometheus remote-write protocol, the only
+# metrics ingestion path gigapipe implements natively. The OTel "Gateway"
+# pattern: a singleton Deployment apps push OTLP metrics to, distinct from
+# otelNodeCollector's "Agent" pattern (a DaemonSet reading each node's own
+# local state) below.
+#
+# Deliberately metrics-only. Logs and traces don't need this at all — gigapipe
+# accepts both directly over OTLP; point an app's OTEL_EXPORTER_OTLP_ENDPOINT
+# straight at gigapipe for those. Point OTEL_EXPORTER_OTLP_METRICS_ENDPOINT
+# (the signal-specific var, which OTLP exporters check before the generic
+# endpoint) at this Service's OTLP/HTTP port, including the /v1/metrics path
+# — e.g. http://otel-gateway.<namespace>.svc.cluster.local:4318/v1/metrics
+# from outside this chart's own namespace.
+otelGateway:
+  fullnameOverride: otel-gateway
+
+  image:
+    repository: otel/opentelemetry-collector-contrib
+    tag: "0.156.0"
+    pullPolicy: IfNotPresent
+
+  replicaCount: 1
+
+  # Kept minimal for colima / low-resource laptops — this proxies one app's
+  # counters, not a fleet's worth of telemetry.
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  # Collector configuration — rendered verbatim into the collector's
+  # config.yaml. Deliberately minimal: one pipeline (OTLP metrics in,
+  # Prometheus remote-write out), nothing else. See
+  # https://opentelemetry.io/docs/collector/configuration/ for the general
+  # schema, or https://github.com/open-telemetry/opentelemetry-collector-contrib
+  # for the receivers/exporters available if you extend this.
+  config:
+    receivers:
+      otlp:
+        protocols:
+          http:
+            endpoint: 0.0.0.0:4318
+
+    processors:
+      batch: {}
+
+    exporters:
+      prometheus_remote_write:
+        # In-cluster gigapipe's Prometheus remote-write endpoint — verified
+        # against a running gigapipe (a bare POST returns 204, not 404).
+        # Hardcoded rather than templated: gigapipe's in-cluster Service
+        # name/port (fullnameOverride: gigapipe, service.port: 3100 above)
+        # is a fixed convention of this chart, not a per-install choice.
+        endpoint: http://gigapipe:3100/prom/remote/write
+
+    extensions:
+      health_check:
+        # 0.0.0.0, not the extension's own localhost default — kubelet
+        # probes hit the pod IP, not loopback inside the container.
+        endpoint: 0.0.0.0:13133
+
+    service:
+      extensions: [health_check]
+      pipelines:
+        metrics:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [prometheus_remote_write]
+
+# ---------------------------------------------------------------------------
+# otel-node-collector
+# ---------------------------------------------------------------------------
+# A node-level OpenTelemetry Collector — one pod per node (DaemonSet), doing
+# three jobs, all scoped to that node: tails every container's log file
+# directly off the node's disk (runtime-agnostic — works whether the
+# underlying runtime is containerd or Docker/cri-dockerd, see the file_log
+# receiver's `container` operator); scrapes the node's own OS metrics (CPU,
+# memory, disk, network, load); scrapes per-pod/per-container resource usage
+# from the kubelet (the same source `kubectl top pods` uses via
+# metrics-server, pulled directly here).
+#
+# Deliberately node-scoped only: cluster-level/object-state metrics (the
+# kube-state-metrics style — Deployment/ReplicaSet counts, cluster capacity,
+# etc.) are a different concern with a different (singleton, API-server-only)
+# collection shape and are out of scope here.
+otelNodeCollector:
+  fullnameOverride: otel-node-collector
+
+  image:
+    repository: otel/opentelemetry-collector-contrib
+    tag: "0.156.0"
+    pullPolicy: IfNotPresent
+
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+
+  rbac:
+    # ClusterRole scoped to read-only: pods/namespaces/nodes (for the
+    # k8s_attributes processor's metadata enrichment) and the nodes/stats
+    # subresource (for kubelet_stats to authenticate against the kubelet via
+    # the API server's SubjectAccessReview). Set false to bring your own RBAC.
+    create: true
+
+  # Runs on every node, including control-plane — a log/metrics agent that
+  # skips the control plane gives you a blind spot there. This is the
+  # standard toleration for cluster-wide node agents.
+  tolerations:
+    - operator: Exists
+
+  # Kept modest per node — this is one collector's worth of log tailing plus
+  # two lightweight scrapers, not a heavy pipeline.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 100Mi
+    limits:
+      memory: 300Mi
+
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  affinity: {}
+
+  # Collector configuration — rendered verbatim into the collector's
+  # config.yaml. Two independent pipelines: logs (file_log → gigapipe's OTLP
+  # logs receiver) and metrics (host_metrics + kubelet_stats → gigapipe's
+  # Prometheus remote-write receiver, the same translation otelGateway does
+  # for app metrics above — gigapipe has no native OTLP metrics receiver, so
+  # anything producing metrics needs this regardless of source). See
+  # https://opentelemetry.io/docs/collector/configuration/ for the general
+  # schema, or the individual receiver/processor docs in
+  # https://github.com/open-telemetry/opentelemetry-collector-contrib for
+  # every option available if you extend this.
+  config:
+    receivers:
+      # Canonical component names below (file_log, host_metrics,
+      # kubelet_stats, k8s_attributes, otlp_http), not the shorter aliases
+      # the examples scattered around the internet still use (filelog,
+      # hostmetrics, etc.) — this collector version logs a deprecation
+      # warning on every one of those aliases at startup.
+      file_log:
+        include:
+          - /var/log/pods/*/*/*.log
+        # Skip this collector's own log file. A literal string, not derived
+        # from fullnameOverride above — values.yaml isn't run through
+        # Helm's templating engine (only files under templates/ are), so a
+        # {{ include ... }} here would be dead text, not a live reference.
+        # Not load-bearing if this drifts from the actual pod name
+        # (self-tailing wouldn't loop, just add a trickle of noise), just
+        # tidier.
+        exclude:
+          - /var/log/pods/*/otel-node-collector/*.log
+        # Only new log lines from here on — a restart replaying every
+        # historical line on every node would be a lot of noise for a
+        # training cluster. Same reasoning as k8sEventsExporter's
+        # maxEventAgeSeconds below.
+        start_at: end
+        # Required by the `container` operator below: it derives
+        # namespace/pod/container name from the log file's path
+        # (`add_metadata_from_filepath`, on by default), which needs the
+        # `log.file.path` attribute this puts on each record. Without it,
+        # every single line fails to parse — found by actually running this
+        # against a live node, not from the docs.
+        include_file_path: true
+        operators:
+          # Auto-detects and parses both the plain CRI log format
+          # (containerd) and Docker's JSON-lines format (cri-dockerd) —
+          # verified against a cluster whose actual log files are the latter.
+          - type: container
+
+      host_metrics:
+        collection_interval: 60s
+        # HOST_PROC/HOST_SYS below point these scrapers at the mounted host
+        # paths (see daemonset.yaml) rather than the container's own /proc,
+        # /sys — which would just describe the collector's own tiny cgroup.
+        #
+        # No `filesystem` scraper: it needs the *entire* host root mounted
+        # (plus a `root_path` setting) to see the host's actual mount points
+        # (/boot, /mnt/..., etc.) — found by running this against a live
+        # node, where it errored trying to stat host paths that don't exist
+        # inside the container without that mount. A full host-root mount
+        # is a much bigger privilege grant than /proc + /sys alone, so it's
+        # left out of the default rather than silently broadening this
+        # chart's footprint. Add it back (with `root_path: /hostfs` and a
+        # `/`-to-`/hostfs` hostPath volume in daemonset.yaml) if per-node
+        # disk capacity matters for your use case.
+        scrapers:
+          cpu: {}
+          memory: {}
+          disk: {}
+          network: {}
+          load: {}
+
+      kubelet_stats:
+        collection_interval: 60s
+        # Authenticates to the kubelet using this pod's own ServiceAccount
+        # token; the API server validates it against the nodes/stats RBAC
+        # rule above via a SubjectAccessReview.
+        auth_type: serviceAccount
+        endpoint: "${env:K8S_NODE_NAME}:10250"
+        # The kubelet's serving cert is typically self-signed / node-local
+        # in a colima-style dev cluster, with no cluster-wide CA a collector
+        # could verify against. Acceptable for a test/training stack
+        # talking to its own node over the cluster network; not something
+        # to carry into a production deployment of this chart.
+        insecure_skip_verify: true
+
+    processors:
+      k8s_attributes: {}
+      batch: {}
+
+    exporters:
+      otlp_http:
+        # In-cluster gigapipe's OTLP endpoint — gigapipe accepts logs (and
+        # traces) natively over OTLP, unlike metrics. /v1/logs is appended
+        # automatically since this is the generic base-endpoint form, not a
+        # signal-specific override.
+        endpoint: http://gigapipe:3100
+      prometheus_remote_write:
+        # Same gigapipe remote-write endpoint otelGateway uses for app
+        # metrics above — see that section's comment for why gigapipe
+        # needs this translation instead of accepting OTLP metrics directly.
+        endpoint: http://gigapipe:3100/prom/remote/write
+
+    extensions:
+      health_check:
+        endpoint: 0.0.0.0:13133
+
+    service:
+      extensions: [health_check]
+      pipelines:
+        logs:
+          receivers: [file_log]
+          processors: [k8s_attributes, batch]
+          exporters: [otlp_http]
+        metrics:
+          receivers: [host_metrics, kubelet_stats]
+          processors: [batch]
+          exporters: [prometheus_remote_write]
+
+# ---------------------------------------------------------------------------
+# k8s-events-exporter
+# ---------------------------------------------------------------------------
+# Ships Kubernetes cluster events (Warning/Normal, not node/system logs) to
+# gigapipe via kubernetes-events-exporter (ownkube fork — upstream resmoio is
+# dormant, the Bitnami chart is deprecated). Node/system logs and cluster
+# metrics are otelNodeCollector's job, not this one's.
+k8sEventsExporter:
+  fullnameOverride: k8s-events-exporter
+
+  image:
+    repository: ghcr.io/ownkube/kubernetes-events-exporter
+    # Pinned rather than `latest` — 0.1.2 is the current tagged release
+    # (https://github.com/ownkube/kubernetes-events-exporter/pkgs/container/kubernetes-events-exporter).
+    tag: "0.1.2"
+    pullPolicy: IfNotPresent
+
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+
+  rbac:
+    # ClusterRole scoped to get/list/watch on events only (both the legacy
+    # core group and events.k8s.io). Set false to bring your own RBAC.
+    create: true
+
+  podAnnotations: {}
+  podLabels: {}
+
+  # Kept minimal for colima / low-resource env — this is an events tailer,
+  # not a store.
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+  # Exporter configuration — rendered verbatim (plus the debugStdout
+  # receiver below, if enabled) into the exporter's config.yaml. See
+  # https://github.com/ownkube/kubernetes-events-exporter for the schema.
+  config:
+    logLevel: info
+    logFormat: json
+
+    # Discard events older than this on (re)start, so a restart doesn't
+    # replay a backlog of stale events into gigapipe.
+    maxEventAgeSeconds: 60
+
+    # The exporter's default behavior is to look up each event's
+    # InvolvedObject (GET the actual Pod/Deployment/ReplicaSet/etc it refers
+    # to) to enrich the event with that object's labels/annotations/
+    # ownerReferences. Our ClusterRole (templates/k8s-events-exporter/
+    # clusterrole.yaml) only grants get/list/watch on `events` — deliberately
+    # not a broad read across every resource kind an event might reference —
+    # so every lookup fails and logs an error. Turning the lookup off avoids
+    # both: streamLabels below only reads
+    # `.InvolvedObject.Namespace`/`.Kind`/`.Name`, which come from the event
+    # object itself, not the lookup, so nothing we actually use is lost.
+    omitLookup: true
+
+    route:
+      routes:
+        - match:
+            - receiver: loki
+
+    receivers:
+      - name: loki
+        loki:
+          # In-cluster gigapipe Loki-push endpoint. gigapipe (qryn) speaks
+          # the Loki HTTP push API on its main service port alongside
+          # OTLP/HTTP. Hardcoded rather than derived from a value: gigapipe's
+          # in-cluster Service name is a fixed convention of this chart
+          # (gigapipe.fullnameOverride above, gigapipe.service.port: 3100),
+          # not a per-install choice.
+          url: http://gigapipe:3100/loki/api/v1/push
+
+          # Go templates over the event struct — a streamLabels feature of
+          # this fork, not upstream resmoio/opsgenie.
+          #
+          # Label keys are NOT yet cross-checked against an established
+          # OTLP app-log convention: nothing in the wider stack fixes an
+          # OTLP resource-attribute schema for app logs yet. `job` and
+          # `namespace` below are a proposed schema: `namespace` is picked
+          # as the join key on the assumption that app-log instrumentation
+          # will eventually emit a plain `namespace` label (e.g. via
+          # OTEL_RESOURCE_ATTRIBUTES=k8s.namespace.name=...). Revisit once
+          # that lands.
+          streamLabels:
+            job: k8s-events
+            namespace: "{{ .InvolvedObject.Namespace }}"
+            involved_object_kind: "{{ .InvolvedObject.Kind }}"
+            involved_object_name: "{{ .InvolvedObject.Name }}"
+
+  # Second receiver, off by default: dumps every event to container stdout
+  # (`kubectl logs`) alongside the loki push, for debugging the exporter
+  # itself without a working gigapipe.
+  debugStdout:
+    enabled: false
