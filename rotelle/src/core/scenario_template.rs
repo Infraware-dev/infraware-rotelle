@@ -136,6 +136,10 @@ pub enum IndexEffect {
     Hang,
     /// Return an HTTP response with a specific status code and HTML body.
     RespondWithStatus(u16, String),
+    /// Sleep for the given number of milliseconds, then return HTTP 200 with this HTML body.
+    /// Simulates a degraded-but-alive pod whose slow responses exceed readiness probe timeouts.
+    /// The index route handler sleeps the async task; the thread pool stays unblocked.
+    RespondAfterDelay(u64, String),
 }
 
 // ── Shared styles ─────────────────────────────────────────────────────────────

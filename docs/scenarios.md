@@ -13,6 +13,7 @@ Each scenario is a named failure condition activated via `POST /rotectl/cmd`.
 | `missing-env-var` | Pod exits on startup if a required env var is absent → CrashLoopBackOff |
 | `service-unreachable` | Every `GET /` hangs — simulates a Service with no matching pods |
 | `ingress-conflict` | Every 3rd request returns 502 — simulates a routing conflict |
+| `slow-response` | Every `GET /` is delayed — simulates a degraded pod that exceeds readiness probe timeouts |
 
 ---
 
@@ -175,6 +176,38 @@ Returns HTTP 502 on every 3rd `GET /`; other requests return 200. The counter re
 **Diagnosis value:** Reproduces the intermittent 502 errors that appear when both a LoadBalancer Service and an Ingress rule compete to route traffic to the same workload.
 
 **Hurl test:** `tests/hurl-scenario/ingress-conflict.hurl`
+
+---
+
+## slow-response
+
+**Source:** `rotelle/src/scenario/slow_response.rs`
+
+**What it simulates:** A pod that is alive but degraded — responding so slowly it exceeds readiness probe timeouts. This models a slow upstream dependency (slow DB query, blocked I/O) that causes the pod to be marked `NotReady` and removed from Service endpoints without ever crashing.
+
+Every `GET /` sleeps for `delay_ms` milliseconds before responding 200 (the async task sleeps; the thread pool stays unblocked). The control plane (`/rotectl/*`) remains instant so the scenario can be reset while requests are slow.
+
+**Parameters:**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `delay_ms` | u64 | 2000 | Milliseconds to sleep before each `GET /` response |
+
+**Activate:**
+```json
+{ "cmd": "set", "scenario": "slow-response", "delay_ms": 2000 }
+```
+
+**`/rotectl/status` extras:**
+```json
+{ "delay_ms": 2000 }
+```
+
+**Diagnosis value:** Helps operators distinguish a crashed pod from a degraded one. The pod is running and logs are clean — only response-time metrics and readiness probe events reveal the issue. Good for training on `kubectl describe pod` readiness-probe failure events.
+
+**Note:** The default manifest's readiness probe targets `/rotectl/health` (which stays fast by design), not `GET /`. To observe an actual readiness-probe `Unhealthy` event, point a probe at `/` with a `timeoutSeconds` lower than `delay_ms`.
+
+**Hurl test:** `tests/hurl-scenario/slow-response.hurl`
 
 ---
 
