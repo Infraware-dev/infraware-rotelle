@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 <!-- Maintained manually. Add a new entry as part of the release checklist in RELEASING.md. -->
 
+## [0.1.1] - 2026-07-22
+
+### Changed
+
+- refactor: restyle control and status pages to a dark monochrome theme
+
 ## [0.1.0] - 2026-05-18
 
 ### Added

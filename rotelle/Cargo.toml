@@ -1,6 +1,6 @@
 [package]
 name = "rotelle"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Simulate Kubernetes failure scenarios on demand — for SRE training and AI evaluation"
 repository = "https://github.com/infraware-dev/infraware-rotelle"
