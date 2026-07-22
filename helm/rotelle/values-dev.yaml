@@ -1,0 +1,11 @@
+# Local-dev override: use the image built by ./scripts/quickstart.sh
+# --build-from-source (or `just build-image`), not the published GHCR tag.
+#
+#   helm install rotelle . -f values-dev.yaml
+#
+# Requires the image already loaded into the cluster (e.g. `kind load
+# docker-image rotelle:dev`) since imagePullPolicy is Never.
+image:
+  repository: rotelle
+  tag: dev
+  pullPolicy: Never

@@ -1,0 +1,19 @@
+Rotelle is deployed.
+
+{{- if .Values.sim.enabled }}
+
+Simulation surface ({{ .Values.sim.service.type }}, {{ .Values.sim.namespace }}/{{ .Values.sim.fullnameOverride }}):
+  kubectl port-forward -n {{ .Values.sim.namespace }} svc/{{ .Values.sim.fullnameOverride }} {{ .Values.sim.service.port }}:{{ .Values.sim.service.port }}
+  open http://localhost:{{ .Values.sim.service.port }}
+{{- end }}
+{{- if .Values.control.enabled }}
+
+Control panel ({{ .Values.control.service.type }}, {{ .Values.control.namespace }}/{{ .Values.control.fullnameOverride }}):
+  kubectl port-forward -n {{ .Values.control.namespace }} svc/{{ .Values.control.fullnameOverride }} {{ .Values.control.service.port }}:{{ .Values.control.service.port }}
+  open http://localhost:{{ .Values.control.service.port }}/rotectl/control
+{{- end }}
+
+Trigger a scenario:
+  curl -X POST http://localhost:{{ .Values.control.port }}/rotectl/cmd \
+    -H 'Content-Type: application/json' \
+    -d '{"cmd": "set", "scenario": "crash-loop"}'

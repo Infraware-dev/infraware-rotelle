@@ -1,0 +1,80 @@
+{{- if .Values.sim.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.sim.fullnameOverride }}
+  namespace: {{ .Values.sim.namespace }}
+  labels:
+    app: {{ .Values.sim.fullnameOverride }}
+    {{- include "rotelle.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.sim.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.sim.fullnameOverride }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.sim.fullnameOverride }}
+        {{- with .Values.sim.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.sim.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      containers:
+        - name: rotelle
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: DATA_DIR
+              value: /data
+            {{- if .Values.sim.controlUrl }}
+            # External control pod URL — points the sim UI's "Control" nav
+            # link at the crash-isolated pod instead of this one's own panel.
+            - name: ROTELLE_CONTROL_URL
+              value: {{ .Values.sim.controlUrl | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /rotectl/health
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.sim.resources | nindent 12 }}
+          volumeMounts:
+            - name: state
+              mountPath: /data
+      {{- with .Values.sim.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.sim.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.sim.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: state
+          {{- if .Values.sim.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.sim.fullnameOverride }}-state
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+{{- end }}

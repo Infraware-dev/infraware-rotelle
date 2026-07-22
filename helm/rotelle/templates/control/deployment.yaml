@@ -1,0 +1,83 @@
+{{- if .Values.control.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.control.fullnameOverride }}
+  namespace: {{ .Values.control.namespace }}
+  labels:
+    app: {{ .Values.control.fullnameOverride }}
+    {{- include "rotelle.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.control.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.control.fullnameOverride }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.control.fullnameOverride }}
+        {{- with .Values.control.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.control.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      containers:
+        - name: rotelle-control
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: ROTELLE_MODE
+              value: "control"
+            - name: ROTELLE_PORT
+              value: {{ .Values.control.port | quote }}
+            - name: DATA_DIR
+              value: /data
+            # In-cluster FQDN of the sim pod's API — sim.fullnameOverride/
+            # namespace/service.port above are a fixed convention of this
+            # chart, not a per-install choice, so this is hardcoded rather
+            # than templated off .Release.Namespace.
+            - name: ROTELLE_SIM_API_URL
+              value: "http://{{ .Values.sim.fullnameOverride }}.{{ .Values.sim.namespace }}.svc.cluster.local:{{ .Values.sim.service.port }}"
+            {{- if .Values.control.simUrl }}
+            - name: ROTELLE_SIM_URL
+              value: {{ .Values.control.simUrl | quote }}
+            {{- end }}
+          ports:
+            - name: control
+              containerPort: {{ .Values.control.port }}
+          readinessProbe:
+            httpGet:
+              path: /rotectl/health
+              port: control
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /rotectl/health
+              port: control
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.control.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /data
+      {{- with .Values.control.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.control.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.control.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      volumes:
+        - name: data
+          emptyDir: {}
+{{- end }}
