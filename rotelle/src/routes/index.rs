@@ -35,5 +35,9 @@ pub async fn index(state: Data<&AppState>) -> Response {
             let status = StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
             (status, Html(html)).into_response()
         }
+        IndexEffect::RespondAfterDelay(delay_ms, body) => {
+            tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+            Html(page_html(name, &body, &state.control_url, &state.sim_url)).into_response()
+        }
     }
 }
