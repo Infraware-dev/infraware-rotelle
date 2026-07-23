@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "observability-gp-mini.otelNodeCollector.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "observability-gp-mini.componentLabels" (dict "ctx" . "component" "otel-node-collector") | nindent 4 }}
+data:
+  config.yaml: |
+    {{- toYaml .Values.otelNodeCollector.config | nindent 4 }}

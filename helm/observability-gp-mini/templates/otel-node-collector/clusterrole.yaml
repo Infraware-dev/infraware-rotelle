@@ -1,0 +1,35 @@
+{{- if .Values.otelNodeCollector.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "observability-gp-mini.otelNodeCollector.fullnameClusterUnique" . }}
+  labels:
+    {{- include "observability-gp-mini.componentLabels" (dict "ctx" . "component" "otel-node-collector") | nindent 4 }}
+rules:
+  # Read-only. pods/namespaces/nodes for the k8s_attributes processor's
+  # metadata enrichment (attaching namespace/pod/node labels to log
+  # records); nodes/stats for kubelet_stats to authenticate against the
+  # kubelet — the kubelet itself checks this via a SubjectAccessReview
+  # against the API server.
+  - apiGroups: [""]
+    resources: ["pods", "namespaces", "nodes"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["nodes/stats"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "observability-gp-mini.otelNodeCollector.fullnameClusterUnique" . }}
+  labels:
+    {{- include "observability-gp-mini.componentLabels" (dict "ctx" . "component" "otel-node-collector") | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "observability-gp-mini.otelNodeCollector.fullnameClusterUnique" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "observability-gp-mini.otelNodeCollector.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

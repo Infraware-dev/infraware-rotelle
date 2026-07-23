@@ -1,0 +1,34 @@
+{{- if .Values.k8sEventsExporter.rbac.create -}}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "observability-gp-mini.k8sEventsExporter.fullnameClusterUnique" . }}
+  labels:
+    {{- include "observability-gp-mini.componentLabels" (dict "ctx" . "component" "k8s-events-exporter") | nindent 4 }}
+rules:
+  # Scoped to events only — this exporter reads and forwards event objects,
+  # nothing else in the cluster. Two apiGroups because Events exist in both
+  # the legacy core group and events.k8s.io (the exporter watches whichever
+  # the cluster serves).
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["events.k8s.io"]
+    resources: ["events"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "observability-gp-mini.k8sEventsExporter.fullnameClusterUnique" . }}
+  labels:
+    {{- include "observability-gp-mini.componentLabels" (dict "ctx" . "component" "k8s-events-exporter") | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "observability-gp-mini.k8sEventsExporter.fullnameClusterUnique" . }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "observability-gp-mini.k8sEventsExporter.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

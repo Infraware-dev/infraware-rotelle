@@ -1,0 +1,119 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: {{ include "observability-gp-mini.otelNodeCollector.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "observability-gp-mini.componentLabels" (dict "ctx" . "component" "otel-node-collector") | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "observability-gp-mini.componentSelectorLabels" (dict "ctx" . "component" "otel-node-collector") | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/otel-node-collector/configmap.yaml") . | sha256sum }}
+        {{- with .Values.otelNodeCollector.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "observability-gp-mini.componentSelectorLabels" (dict "ctx" . "component" "otel-node-collector") | nindent 8 }}
+        {{- with .Values.otelNodeCollector.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "observability-gp-mini.otelNodeCollector.serviceAccountName" . }}
+      containers:
+        - name: otel-node-collector
+          image: "{{ .Values.otelNodeCollector.image.repository }}:{{ .Values.otelNodeCollector.image.tag }}"
+          imagePullPolicy: {{ .Values.otelNodeCollector.image.pullPolicy }}
+          args:
+            - --config=/etc/otel/config.yaml
+          env:
+            - name: K8S_NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+            - name: HOST_PROC
+              value: /hostfs/proc
+            - name: HOST_SYS
+              value: /hostfs/sys
+          ports:
+            - name: health
+              containerPort: 13133
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /
+              port: health
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          # Not the usual unprivileged-container posture the rest of this
+          # chart uses: reading another process's container log files and
+          # /proc, /sys off the host requires root — a mounted volume
+          # otherwise keeps the image's own (non-root) user, which cannot
+          # read files owned by root on the node. This is the same
+          # constraint every node-level log/metrics agent has (Promtail,
+          # Fluent Bit, Datadog's node agent, etc.), not something specific
+          # to this chart.
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            {{- toYaml .Values.otelNodeCollector.resources | nindent 12 }}
+          volumeMounts:
+            - name: cfg
+              mountPath: /etc/otel
+            - name: varlogpods
+              mountPath: /var/log/pods
+              readOnly: true
+            # This cluster's container runtime is Docker (via cri-dockerd):
+            # /var/log/pods/**/*.log is a symlink into here, so the target
+            # has to be mounted too for the log file to actually resolve —
+            # verified directly against a running node. Harmless to mount
+            # even on a containerd node, where this directory is just empty.
+            - name: dockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: hostproc
+              mountPath: /hostfs/proc
+              readOnly: true
+            - name: hostsys
+              mountPath: /hostfs/sys
+              readOnly: true
+      volumes:
+        - name: cfg
+          configMap:
+            name: {{ include "observability-gp-mini.otelNodeCollector.fullname" . }}
+        - name: varlogpods
+          hostPath:
+            path: /var/log/pods
+        - name: dockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+        - name: hostproc
+          hostPath:
+            path: /proc
+        - name: hostsys
+          hostPath:
+            path: /sys
+      {{- with .Values.otelNodeCollector.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.otelNodeCollector.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.otelNodeCollector.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

@@ -95,11 +95,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Package Helm charts
+        run: |
+          tar -czf rotelle-helm-chart.tgz -C helm rotelle
+          tar -czf observability-gp-mini-helm-chart.tgz -C helm observability-gp-mini
+
       - name: Create GitHub Release
         run: |
           gh release create ${{ github.ref_name }} \
             --title "${{ github.ref_name }}" \
             --generate-notes \
-            --latest
+            --latest \
+            rotelle-helm-chart.tgz \
+            observability-gp-mini-helm-chart.tgz
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

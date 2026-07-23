@@ -1,0 +1,15 @@
+{{- if .Values.createNamespaces }}
+{{- if .Values.sim.enabled }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.sim.namespace }}
+---
+{{- end }}
+{{- if and .Values.control.enabled (or (not .Values.sim.enabled) (ne .Values.control.namespace .Values.sim.namespace)) }}
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.control.namespace }}
+{{- end }}
+{{- end }}

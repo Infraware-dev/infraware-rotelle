@@ -1,0 +1,18 @@
+apiVersion: v2
+name: rotelle
+description: Simulate Kubernetes failure scenarios — crash-loop, OOMKill, missing env var, hung connections, ingress conflicts, and more. Deploys the sim pod and its crash-isolated control pod.
+type: application
+
+# Chart version — bump on chart changes, independent of the app version.
+version: 0.1.0
+
+appVersion: "0.1.0"
+
+kubeVersion: ">=1.23.0-0"
+
+home: https://github.com/Infraware-dev/infraware-rotelle
+sources:
+  - https://github.com/Infraware-dev/infraware-rotelle
+maintainers:
+  - name: Infraware S.R.L.
+    email: info@infraware.it
