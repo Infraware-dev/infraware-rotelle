@@ -46,7 +46,7 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 
 {{/*
 Per-component name/labels/selector-labels — one chart, several components
-(otel-gateway, otel-node-collector, k8s-events-exporter, clickhouse), each
+(otel-gateway, otel-node-collector, clickhouse), each
 needing its own Service-selectable identity. Called with a dict, e.g.:
   {{ include "observability-gp-mini.componentFullname" (dict "ctx" $ "component" "otel-gateway" "override" .Values.otelGateway.fullnameOverride) }}
 "component" becomes the app.kubernetes.io/component label and the default
@@ -74,7 +74,7 @@ app.kubernetes.io/component: {{ .component }}
 A component's fullname, qualified with the release namespace — for any
 resource that must stay unique across the whole cluster rather than just
 within one namespace (a ClusterRole, say). otel-node-collector and
-k8s-events-exporter both need this for their ClusterRole/ClusterRoleBinding;
+otel-gateway both need this for their ClusterRole/ClusterRoleBinding;
 their Deployment/DaemonSet/ServiceAccount use the plain componentFullname
 above instead, since those are namespaced and get isolation from the
 namespace itself.
@@ -90,6 +90,18 @@ namespace itself.
 
 {{- define "observability-gp-mini.otelGateway.fullname" -}}
 {{- include "observability-gp-mini.componentFullname" (dict "ctx" . "component" "otel-gateway" "override" .Values.otelGateway.fullnameOverride) }}
+{{- end }}
+
+{{- define "observability-gp-mini.otelGateway.fullnameClusterUnique" -}}
+{{- include "observability-gp-mini.componentFullnameClusterUnique" (dict "ctx" . "component" "otel-gateway" "override" .Values.otelGateway.fullnameOverride) }}
+{{- end }}
+
+{{- define "observability-gp-mini.otelGateway.serviceAccountName" -}}
+{{- if .Values.otelGateway.serviceAccount.create }}
+{{- default (include "observability-gp-mini.otelGateway.fullname" .) .Values.otelGateway.serviceAccount.name }}
+{{- else }}
+{{- default "default" .Values.otelGateway.serviceAccount.name }}
+{{- end }}
 {{- end }}
 
 {{/* ------------------------------------------------------------------ */}}
@@ -109,25 +121,5 @@ namespace itself.
 {{- default (include "observability-gp-mini.otelNodeCollector.fullname" .) .Values.otelNodeCollector.serviceAccount.name }}
 {{- else }}
 {{- default "default" .Values.otelNodeCollector.serviceAccount.name }}
-{{- end }}
-{{- end }}
-
-{{/* ------------------------------------------------------------------ */}}
-{{/* k8s-events-exporter                                                 */}}
-{{/* ------------------------------------------------------------------ */}}
-
-{{- define "observability-gp-mini.k8sEventsExporter.fullname" -}}
-{{- include "observability-gp-mini.componentFullname" (dict "ctx" . "component" "k8s-events-exporter" "override" .Values.k8sEventsExporter.fullnameOverride) }}
-{{- end }}
-
-{{- define "observability-gp-mini.k8sEventsExporter.fullnameClusterUnique" -}}
-{{- include "observability-gp-mini.componentFullnameClusterUnique" (dict "ctx" . "component" "k8s-events-exporter" "override" .Values.k8sEventsExporter.fullnameOverride) }}
-{{- end }}
-
-{{- define "observability-gp-mini.k8sEventsExporter.serviceAccountName" -}}
-{{- if .Values.k8sEventsExporter.serviceAccount.create }}
-{{- default (include "observability-gp-mini.k8sEventsExporter.fullname" .) .Values.k8sEventsExporter.serviceAccount.name }}
-{{- else }}
-{{- default "default" .Values.k8sEventsExporter.serviceAccount.name }}
 {{- end }}
 {{- end }}

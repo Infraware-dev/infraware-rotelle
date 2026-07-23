@@ -24,7 +24,7 @@ gigapipe:
 
   # Pins the Service name so every other component's hardcoded
   # "http://gigapipe:..." address (below, and in otelGateway/
-  # otelNodeCollector/k8sEventsExporter's own config) stays correct. Without
+  # otelNodeCollector's own config) stays correct. Without
   # it the name is release-dependent.
   fullnameOverride: gigapipe
 
@@ -102,6 +102,17 @@ otelGateway:
 
   replicaCount: 1
 
+  serviceAccount:
+    create: true
+    annotations: {}
+    name: ""
+
+  rbac:
+    # ClusterRole scoped to get/list/watch on events only (both the legacy
+    # core group and events.k8s.io), for the k8sobjects receiver below. Set
+    # false to bring your own RBAC.
+    create: true
+
   # Kept minimal for colima / low-resource laptops — this proxies one app's
   # counters, not a fleet's worth of telemetry.
   resources:
@@ -118,8 +129,9 @@ otelGateway:
   affinity: {}
 
   # Collector configuration — rendered verbatim into the collector's
-  # config.yaml. Deliberately minimal: one pipeline (OTLP metrics in,
-  # Prometheus remote-write out), nothing else. See
+  # config.yaml. Two independent pipelines: metrics (OTLP in, Prometheus
+  # remote-write out) and logs/events (Kubernetes Event objects in via the
+  # k8sobjects receiver, OTLP logs out) — see
   # https://opentelemetry.io/docs/collector/configuration/ for the general
   # schema, or https://github.com/open-telemetry/opentelemetry-collector-contrib
   # for the receivers/exporters available if you extend this.
@@ -130,8 +142,43 @@ otelGateway:
           http:
             endpoint: 0.0.0.0:4318
 
+      # Watches Event objects cluster-wide and turns each into a log record.
+      # Lives here rather than on otelNodeCollector's DaemonSet because
+      # Events are a cluster-scoped singleton resource — one watch per
+      # cluster, not one per node (a DaemonSet copy per node would just
+      # watch the same cluster-wide stream N times over). auth_type:
+      # serviceAccount uses this pod's own ServiceAccount token, authorized
+      # by the ClusterRole in templates/otel-gateway/clusterrole.yaml. The
+      # receiver stamps its own k8s.resource.name=events resource attribute
+      # on every record, so that alone is enough to select these logs out
+      # from anything else flowing into gigapipe.
+      k8sobjects:
+        auth_type: serviceAccount
+        objects:
+          - name: events
+            mode: watch
+
     processors:
       batch: {}
+
+      # Lifts each event's InvolvedObject (the Pod/Deployment/Node/etc it's
+      # actually about) out of the k8sobjects receiver's raw log body
+      # (shaped like the k8s watch API's {"type": ..., "object": {...}}
+      # envelope) into resource attributes, named in the same k8s.<x>.name
+      # dotted style otelNodeCollector's k8s_attributes processor already
+      # uses for its own log resource attributes — so both pipelines'
+      # events/logs stay queryable under one consistent attribute family.
+      # Field paths (body["object"]["involvedObject"]...) are per the
+      # k8sobjectsreceiver's documented event-object shape; confirm against
+      # `kubectl logs` on this pod (or gigapipe's ingested attributes) after
+      # install and adjust if a collector upgrade changes that shape.
+      transform:
+        log_statements:
+          - context: log
+            statements:
+              - set(resource.attributes["k8s.namespace.name"], body["object"]["involvedObject"]["namespace"])
+              - set(resource.attributes["k8s.object.kind"], body["object"]["involvedObject"]["kind"])
+              - set(resource.attributes["k8s.object.name"], body["object"]["involvedObject"]["name"])
 
     exporters:
       prometheus_remote_write:
@@ -141,6 +188,12 @@ otelGateway:
         # name/port (fullnameOverride: gigapipe, service.port: 3100 above)
         # is a fixed convention of this chart, not a per-install choice.
         endpoint: http://gigapipe:3100/prom/remote/write
+
+      otlp_http:
+        # Same in-cluster gigapipe OTLP endpoint otelNodeCollector's logs
+        # pipeline uses — gigapipe accepts logs natively over OTLP, /v1/logs
+        # appended automatically since this is the generic base-endpoint form.
+        endpoint: http://gigapipe:3100
 
     extensions:
       health_check:
@@ -155,6 +208,10 @@ otelGateway:
           receivers: [otlp]
           processors: [batch]
           exporters: [prometheus_remote_write]
+        logs/events:
+          receivers: [k8sobjects]
+          processors: [transform, batch]
+          exporters: [otlp_http]
 
 # ---------------------------------------------------------------------------
 # otel-node-collector
@@ -243,8 +300,7 @@ otelNodeCollector:
           - /var/log/pods/*/otel-node-collector/*.log
         # Only new log lines from here on — a restart replaying every
         # historical line on every node would be a lot of noise for a
-        # training cluster. Same reasoning as k8sEventsExporter's
-        # maxEventAgeSeconds below.
+        # training cluster.
         start_at: end
         # Required by the `container` operator below: it derives
         # namespace/pod/container name from the log file's path
@@ -329,107 +385,3 @@ otelNodeCollector:
           processors: [batch]
           exporters: [prometheus_remote_write]
 
-# ---------------------------------------------------------------------------
-# k8s-events-exporter
-# ---------------------------------------------------------------------------
-# Ships Kubernetes cluster events (Warning/Normal, not node/system logs) to
-# gigapipe via kubernetes-events-exporter (ownkube fork — upstream resmoio is
-# dormant, the Bitnami chart is deprecated). Node/system logs and cluster
-# metrics are otelNodeCollector's job, not this one's.
-k8sEventsExporter:
-  fullnameOverride: k8s-events-exporter
-
-  image:
-    repository: ghcr.io/ownkube/kubernetes-events-exporter
-    # Pinned rather than `latest` — 0.1.2 is the current tagged release
-    # (https://github.com/ownkube/kubernetes-events-exporter/pkgs/container/kubernetes-events-exporter).
-    tag: "0.1.2"
-    pullPolicy: IfNotPresent
-
-  serviceAccount:
-    create: true
-    annotations: {}
-    name: ""
-
-  rbac:
-    # ClusterRole scoped to get/list/watch on events only (both the legacy
-    # core group and events.k8s.io). Set false to bring your own RBAC.
-    create: true
-
-  podAnnotations: {}
-  podLabels: {}
-
-  # Kept minimal for colima / low-resource env — this is an events tailer,
-  # not a store.
-  resources:
-    requests:
-      cpu: 10m
-      memory: 32Mi
-    limits:
-      memory: 64Mi
-
-  nodeSelector: {}
-  tolerations: []
-  affinity: {}
-
-  # Exporter configuration — rendered verbatim (plus the debugStdout
-  # receiver below, if enabled) into the exporter's config.yaml. See
-  # https://github.com/ownkube/kubernetes-events-exporter for the schema.
-  config:
-    logLevel: info
-    logFormat: json
-
-    # Discard events older than this on (re)start, so a restart doesn't
-    # replay a backlog of stale events into gigapipe.
-    maxEventAgeSeconds: 60
-
-    # The exporter's default behavior is to look up each event's
-    # InvolvedObject (GET the actual Pod/Deployment/ReplicaSet/etc it refers
-    # to) to enrich the event with that object's labels/annotations/
-    # ownerReferences. Our ClusterRole (templates/k8s-events-exporter/
-    # clusterrole.yaml) only grants get/list/watch on `events` — deliberately
-    # not a broad read across every resource kind an event might reference —
-    # so every lookup fails and logs an error. Turning the lookup off avoids
-    # both: streamLabels below only reads
-    # `.InvolvedObject.Namespace`/`.Kind`/`.Name`, which come from the event
-    # object itself, not the lookup, so nothing we actually use is lost.
-    omitLookup: true
-
-    route:
-      routes:
-        - match:
-            - receiver: loki
-
-    receivers:
-      - name: loki
-        loki:
-          # In-cluster gigapipe Loki-push endpoint. gigapipe (qryn) speaks
-          # the Loki HTTP push API on its main service port alongside
-          # OTLP/HTTP. Hardcoded rather than derived from a value: gigapipe's
-          # in-cluster Service name is a fixed convention of this chart
-          # (gigapipe.fullnameOverride above, gigapipe.service.port: 3100),
-          # not a per-install choice.
-          url: http://gigapipe:3100/loki/api/v1/push
-
-          # Go templates over the event struct — a streamLabels feature of
-          # this fork, not upstream resmoio/opsgenie.
-          #
-          # Label keys are NOT yet cross-checked against an established
-          # OTLP app-log convention: nothing in the wider stack fixes an
-          # OTLP resource-attribute schema for app logs yet. `job` and
-          # `namespace` below are a proposed schema: `namespace` is picked
-          # as the join key on the assumption that app-log instrumentation
-          # will eventually emit a plain `namespace` label (e.g. via
-          # OTEL_RESOURCE_ATTRIBUTES=k8s.namespace.name=...). Revisit once
-          # that lands.
-          streamLabels:
-            job: k8s-events
-            namespace: "{{ .InvolvedObject.Namespace }}"
-            involved_object_kind: "{{ .InvolvedObject.Kind }}"
-            involved_object_name: "{{ .InvolvedObject.Name }}"
-
-  # Second receiver, off by default: dumps every event to container stdout
-  # (`kubectl logs`) alongside the loki push, for debugging the exporter
-  # itself without a working gigapipe.
-  debugStdout:
-    enabled: false
