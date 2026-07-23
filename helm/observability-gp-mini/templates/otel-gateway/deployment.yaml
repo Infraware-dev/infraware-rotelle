@@ -23,6 +23,7 @@ spec:
         {{- toYaml . | nindent 8 }}
         {{- end }}
     spec:
+      serviceAccountName: {{ include "observability-gp-mini.otelGateway.serviceAccountName" . }}
       securityContext:
         runAsNonRoot: true
         seccompProfile:

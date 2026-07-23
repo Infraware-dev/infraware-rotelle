@@ -4,11 +4,11 @@ description: Minimal reference observability stack for gigapipe (qryn) — OTLP 
 type: application
 
 # Chart version — bump on chart changes, independent of any component image.
-version: 0.1.0
+version: 0.2.0
 
 # Nominal: this chart bundles several components (see below), each pinning
 # its own image tag in values.yaml — there is no single "app version" to track.
-appVersion: "0.1.0"
+appVersion: "0.2.0"
 
 kubeVersion: ">=1.23.0-0"
 
@@ -17,7 +17,6 @@ sources:
   - https://github.com/Infraware-dev/infraware-rotelle
   - https://github.com/metrico/qryn
   - https://github.com/open-telemetry/opentelemetry-collector-contrib
-  - https://github.com/ownkube/kubernetes-events-exporter
 maintainers:
   - name: Infraware S.R.L.
     email: info@infraware.it

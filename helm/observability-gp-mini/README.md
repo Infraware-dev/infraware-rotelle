@@ -7,16 +7,15 @@ A minimal reference observability stack built around [gigapipe](https://github.c
 |-----------|----------------|
 | `gigapipe` (dependency) | OTLP logs/traces + Loki-push ingestion, Prometheus remote-write, backed by ClickHouse. |
 | `clickhouse` (this chart's own template) | Single-node ClickHouse for gigapipe to write to. Not fit for production — no auth, no replication, emptyDir by default. |
-| `otel-gateway` | A minimal upstream OpenTelemetry Collector translating app-level OTLP metrics into the Prometheus remote-write protocol gigapipe accepts natively (it has no OTLP metrics receiver of its own). |
+| `otel-gateway` | A minimal upstream OpenTelemetry Collector translating app-level OTLP metrics into the Prometheus remote-write protocol gigapipe accepts natively (it has no OTLP metrics receiver of its own), and shipping cluster-wide Kubernetes `Event` objects (pod scheduled, container crashed, etc.) into gigapipe so they outlive `kubectl get events`'s short TTL. |
 | `otel-node-collector` | A per-node DaemonSet: tails every container's logs, scrapes node OS metrics, and scrapes kubelet pod/container stats. |
-| `k8s-events-exporter` | Ships Kubernetes `Event` objects (pod scheduled, container crashed, etc.) into gigapipe so they outlive `kubectl get events`'s short TTL. |
 
 Not fit for production as shipped — single replicas throughout, no auth on
 gigapipe or ClickHouse. This exists to give a demo, training, or dev cluster
 somewhere to point OTLP metrics/logs and Kubernetes events at with one
 command, not to be a production observability backend.
 
-## Why these four components live in one chart instead of one each
+## Why these three components live in one chart instead of one each
 
 They only exist to feed gigapipe — nothing else in this chart (or, as far as
 this repo is concerned, anywhere) consumes them independently today. Folding
@@ -47,7 +46,7 @@ documentation (image, resources, RBAC, and its rendered-verbatim `config`).
 
 Kubernetes events:
 ```logql
-{job="k8s-events"}
+{k8s_resource_name="events"}
 ```
 
 Node CPU:
