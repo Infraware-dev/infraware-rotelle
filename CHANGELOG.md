@@ -7,6 +7,23 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 <!-- Maintained manually. Add a new entry as part of the release checklist in RELEASING.md. -->
 
+## [0.1.3] - 2026-07-24
+
+### Added
+
+- feat: add slow-response scenario
+- feat: package helm charts in GHCR publish workflow
+- feat: add helm/rotelle chart
+- feat: add helm/observability-gp-mini chart
+
+### Fixed
+
+- fix: helm observability simplify
+
+## [0.1.2] - 2026-07-22
+
+(Skipped — folded into 0.1.3.)
+
 ## [0.1.1] - 2026-07-22
 
 ### Changed
