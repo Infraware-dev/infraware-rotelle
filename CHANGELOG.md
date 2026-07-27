@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 <!-- Maintained manually. Add a new entry as part of the release checklist in RELEASING.md. -->
 
+## [0.1.3-1] - 2026-07-27
+
+### Changed
+
+- chore: update helm chart with otel k8s events collector fix
+
 ## [0.1.3] - 2026-07-24
 
 ### Added
