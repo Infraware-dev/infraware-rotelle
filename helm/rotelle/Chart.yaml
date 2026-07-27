@@ -4,9 +4,9 @@ description: Simulate Kubernetes failure scenarios — crash-loop, OOMKill, miss
 type: application
 
 # Chart version — bump on chart changes, independent of the app version.
-version: 0.1.0
+version: 0.1.3
 
-appVersion: "0.1.0"
+appVersion: "0.1.3"
 
 kubeVersion: ">=1.23.0-0"
 
