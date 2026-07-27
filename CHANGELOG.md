@@ -7,7 +7,7 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 <!-- Maintained manually. Add a new entry as part of the release checklist in RELEASING.md. -->
 
-## [0.1.3-1] - 2026-07-27
+## [0.1.4] - 2026-07-27
 
 ### Changed
 
