@@ -131,7 +131,7 @@ otelGateway:
   # Collector configuration — rendered verbatim into the collector's
   # config.yaml. Two independent pipelines: metrics (OTLP in, Prometheus
   # remote-write out) and logs/events (Kubernetes Event objects in via the
-  # k8sobjects receiver, OTLP logs out) — see
+  # k8s_events receiver, OTLP logs out) — see
   # https://opentelemetry.io/docs/collector/configuration/ for the general
   # schema, or https://github.com/open-telemetry/opentelemetry-collector-contrib
   # for the receivers/exporters available if you extend this.
@@ -148,37 +148,45 @@ otelGateway:
       # cluster, not one per node (a DaemonSet copy per node would just
       # watch the same cluster-wide stream N times over). auth_type:
       # serviceAccount uses this pod's own ServiceAccount token, authorized
-      # by the ClusterRole in templates/otel-gateway/clusterrole.yaml. The
-      # receiver stamps its own k8s.resource.name=events resource attribute
-      # on every record, so that alone is enough to select these logs out
-      # from anything else flowing into gigapipe.
-      k8sobjects:
+      # by the ClusterRole in templates/otel-gateway/clusterrole.yaml.
+      #
+      # Purpose-built for this (alpha stability for logs, but does the right
+      # thing out of the box) — used in place of the generic k8sobjects
+      # receiver, which was tried first and had two silent failure modes
+      # confirmed against a running gigapipe: it emits body as a structured
+      # map rather than a string (gigapipe's OTLP-logs ingestion only
+      # persists a string body, so the line got dropped while the series'
+      # label metadata still got registered) and never sets the log
+      # record's own Timestamp (only ObservedTimestamp, leaving Timestamp
+      # at 1970-01-01 — gigapipe accepted the POST with 204 either way but
+      # silently dropped anything timestamped that far out of range).
+      # `{k8s_resource_name="events"}` via gigapipe's Loki query API
+      # returned zero results with k8sobjects; both issues are avoided here
+      # since this receiver sets Timestamp from the event's lastTimestamp,
+      # body to the event's plain-text message, and k8s.event.*/k8s.object.*
+      # attributes natively — no transform processor needed.
+      #
+      # storage: file_storage persists the last-seen resourceVersion (see
+      # extensions.file_storage below) so a pod restart resumes the watch
+      # instead of replaying the cluster's whole event history. Backed by
+      # an emptyDir, so it's still lost on pod eviction/reschedule (not
+      # just restart) — acceptable for this colima/training setup; use a
+      # real volume if that gap matters.
+      k8s_events:
         auth_type: serviceAccount
-        objects:
-          - name: events
-            mode: watch
+        storage: file_storage
+
+      # The generic k8sobjectsreceiver (distinct from k8s_events above,
+      # which is purpose-built for the Event stream specifically) is
+      # available in this same collector image for other object kinds —
+      # e.g. periodic Pod/Deployment state snapshots via pull mode — but
+      # isn't declared here since an unused `objects: []` receiver still
+      # fails collector config validation even when no pipeline references
+      # it. Add a `k8sobjects: {auth_type: serviceAccount, objects: [...]}`
+      # block plus a pipeline entry to activate it when something needs it.
 
     processors:
       batch: {}
-
-      # Lifts each event's InvolvedObject (the Pod/Deployment/Node/etc it's
-      # actually about) out of the k8sobjects receiver's raw log body
-      # (shaped like the k8s watch API's {"type": ..., "object": {...}}
-      # envelope) into resource attributes, named in the same k8s.<x>.name
-      # dotted style otelNodeCollector's k8s_attributes processor already
-      # uses for its own log resource attributes — so both pipelines'
-      # events/logs stay queryable under one consistent attribute family.
-      # Field paths (body["object"]["involvedObject"]...) are per the
-      # k8sobjectsreceiver's documented event-object shape; confirm against
-      # `kubectl logs` on this pod (or gigapipe's ingested attributes) after
-      # install and adjust if a collector upgrade changes that shape.
-      transform:
-        log_statements:
-          - context: log
-            statements:
-              - set(resource.attributes["k8s.namespace.name"], body["object"]["involvedObject"]["namespace"])
-              - set(resource.attributes["k8s.object.kind"], body["object"]["involvedObject"]["kind"])
-              - set(resource.attributes["k8s.object.name"], body["object"]["involvedObject"]["name"])
 
     exporters:
       prometheus_remote_write:
@@ -201,16 +209,23 @@ otelGateway:
         # probes hit the pod IP, not loopback inside the container.
         endpoint: 0.0.0.0:13133
 
+      # Backs the k8s_events receiver's `storage:` setting above — see that
+      # comment for why. Directory matches the emptyDir volume mount in
+      # deployment.yaml (needed since the container filesystem is otherwise
+      # read-only).
+      file_storage:
+        directory: /var/lib/otelcol/storage
+
     service:
-      extensions: [health_check]
+      extensions: [health_check, file_storage]
       pipelines:
         metrics:
           receivers: [otlp]
           processors: [batch]
           exporters: [prometheus_remote_write]
         logs/events:
-          receivers: [k8sobjects]
-          processors: [transform, batch]
+          receivers: [k8s_events]
+          processors: [batch]
           exporters: [otlp_http]
 
 # ---------------------------------------------------------------------------

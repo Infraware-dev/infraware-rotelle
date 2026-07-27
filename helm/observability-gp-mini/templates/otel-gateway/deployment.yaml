@@ -63,10 +63,20 @@ spec:
           volumeMounts:
             - name: cfg
               mountPath: /etc/otel
+            - name: storage
+              mountPath: /var/lib/otelcol/storage
       volumes:
         - name: cfg
           configMap:
             name: {{ include "observability-gp-mini.otelGateway.fullname" . }}
+        # Backs extensions.file_storage in config.yaml — the container
+        # filesystem is otherwise read-only (securityContext above), and
+        # the k8s_events receiver's storage checkpoint needs somewhere
+        # writable. emptyDir, not a PVC: losing the checkpoint on
+        # pod reschedule just means replaying recent events once, not data
+        # loss.
+        - name: storage
+          emptyDir: {}
       {{- with .Values.otelGateway.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}
