@@ -6,7 +6,7 @@ metadata:
   labels:
     {{- include "observability-gp-mini.componentLabels" (dict "ctx" . "component" "otel-gateway") | nindent 4 }}
 rules:
-  # Scoped to events only, for the k8sobjects receiver's `events` watch (see
+  # Scoped to events only, for the k8s_events receiver's watch (see
   # otelGateway.config.receivers). Two apiGroups because Events exist in both
   # the legacy core group and events.k8s.io (the receiver watches whichever
   # the cluster serves).
