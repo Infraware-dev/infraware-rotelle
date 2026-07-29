@@ -1,0 +1,139 @@
+{{- if .Values.clickhouse.enabled }}
+{{- /*
+Minimal single-node ClickHouse for this reference stack. Not fit for
+production: no auth, no replication, and emptyDir by default so the stack
+tears down clean. It exists only to give gigapipe somewhere to write — point
+gigapipe at a real cluster and set clickhouse.enabled=false for anything else.
+
+The Service is named `clickhouse` literally (not release-prefixed) because
+gigapipe's chart consumes CLICKHOUSE_SERVER as a plain string, not a template
+(its deployment renders `value: "{{ $val }}"`), so the address has to be a
+fixed name the gigapipe.env block can hard-code. Keep the two in step.
+*/}}
+{{- $db := (default "gigapipe" (dig "env" "CLICKHOUSE_DB" "gigapipe" .Values.gigapipe)) }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: clickhouse
+  labels:
+    app.kubernetes.io/name: clickhouse
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: database
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: tcp
+      port: {{ .Values.clickhouse.service.port }}
+      targetPort: tcp
+      protocol: TCP
+    - name: http
+      port: {{ .Values.clickhouse.service.httpPort }}
+      targetPort: http
+      protocol: TCP
+  selector:
+    app.kubernetes.io/name: clickhouse
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+{{- if and .Values.clickhouse.persistence.enabled (not .Values.clickhouse.persistence.existingClaim) }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: clickhouse
+  labels:
+    app.kubernetes.io/name: clickhouse
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: database
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- with .Values.clickhouse.persistence.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.clickhouse.persistence.size | quote }}
+---
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: clickhouse
+  labels:
+    app.kubernetes.io/name: clickhouse
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: database
+    app.kubernetes.io/managed-by: {{ .Release.Service }}
+spec:
+  replicas: 1
+  strategy:
+    # Recreate, not RollingUpdate: the data volume is RWO (or emptyDir), which
+    # a surging second pod could not mount, and two nodes writing the same
+    # single-node store would corrupt it.
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: clickhouse
+      app.kubernetes.io/instance: {{ .Release.Name }}
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: clickhouse
+        app.kubernetes.io/instance: {{ .Release.Name }}
+        app.kubernetes.io/component: database
+    spec:
+      # 101 is the clickhouse uid in the official image. fsGroup makes a mounted
+      # volume writable by it; the image entrypoint starts as root and drops to
+      # this user via su-exec, so no runAsUser override here — forcing one fights
+      # the entrypoint's own chown of /var/lib/clickhouse.
+      securityContext:
+        fsGroup: 101
+      containers:
+        - name: clickhouse
+          image: {{ .Values.clickhouse.image | quote }}
+          imagePullPolicy: IfNotPresent
+          env:
+            # The official image creates this database at first start, so
+            # gigapipe (CLICKHOUSE_DB={{ $db }}) has a schema to init into
+            # without a manual bootstrap step.
+            - name: CLICKHOUSE_DB
+              value: {{ $db | quote }}
+            # Let the default user create the schema gigapipe needs on init.
+            - name: CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT
+              value: "1"
+          ports:
+            - name: tcp
+              containerPort: 9000
+              protocol: TCP
+            - name: http
+              containerPort: 8123
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /ping
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            {{- toYaml .Values.clickhouse.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/clickhouse
+      volumes:
+        - name: data
+          {{- if .Values.clickhouse.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ default "clickhouse" .Values.clickhouse.persistence.existingClaim }}
+          {{- else }}
+          # emptyDir: this reference stack keeps no data by default. Set
+          # clickhouse.persistence.enabled to survive a pod restart.
+          emptyDir: {}
+          {{- end }}
+{{- end }}

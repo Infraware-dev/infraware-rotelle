@@ -43,6 +43,9 @@ pub async fn index(state: Data<&AppState>) -> Response {
                 poem::http::HeaderValue::from_static("close"),
             );
             response
+        IndexEffect::RespondAfterDelay(delay_ms, body) => {
+            tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+            Html(page_html(name, &body, &state.control_url, &state.sim_url)).into_response()
         }
     }
 }

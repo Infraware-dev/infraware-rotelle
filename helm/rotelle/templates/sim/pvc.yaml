@@ -1,0 +1,19 @@
+{{- if and .Values.sim.enabled .Values.sim.persistence.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.sim.fullnameOverride }}-state
+  namespace: {{ .Values.sim.namespace }}
+  labels:
+    app: {{ .Values.sim.fullnameOverride }}
+    {{- include "rotelle.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- with .Values.sim.persistence.storageClass }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.sim.persistence.size }}
+{{- end }}

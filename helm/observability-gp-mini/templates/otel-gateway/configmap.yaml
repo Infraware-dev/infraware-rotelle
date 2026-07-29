@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "observability-gp-mini.otelGateway.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "observability-gp-mini.componentLabels" (dict "ctx" . "component" "otel-gateway") | nindent 4 }}
+data:
+  config.yaml: |
+    {{- toYaml .Values.otelGateway.config | nindent 4 }}
