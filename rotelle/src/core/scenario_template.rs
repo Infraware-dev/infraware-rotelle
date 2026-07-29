@@ -136,6 +136,7 @@ pub enum IndexEffect {
     Hang,
     /// Return an HTTP response with a specific status code and HTML body.
     RespondWithStatus(u16, String),
+    RespondThenClose(String),
 }
 
 // ── Shared styles ─────────────────────────────────────────────────────────────
