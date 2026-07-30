@@ -1,6 +1,7 @@
 obs_release      := env("OBS_RELEASE", "observability")
 obs_namespace    := env("OBS_NAMESPACE", "observability")
 rotelle_release  := env("ROTELLE_RELEASE", "rotelle")
+rotelle_namespace := env("ROTELLE_NAMESPACE", "rotelle")
 
 _default:
     @just --list
@@ -15,15 +16,25 @@ uninstall-obs:
 
 # Install rotelle (sim + control pod), default GHCR image. Creates its own rotelle/rotelle-system namespaces.
 install-rotelle:
-    helm upgrade --install --rollback-on-failure {{rotelle_release}} ./rotelle
+    helm upgrade --install \
+      --create-namespace \
+      --rollback-on-failure \
+      -n {{rotelle_namespace}} \
+       {{rotelle_release}} ./rotelle
 
 # Install rotelle against a locally-built image — for validating the chart, not the rebuild/redeploy inner loop (use `just deploy` at the repo root for that)
 install-rotelle-dev:
-    helm upgrade --install --rollback-on-failure {{rotelle_release}} ./rotelle -f ./rotelle/values-dev.yaml
+    helm upgrade --install \
+      --rollback-on-failure \
+      -n {{rotelle_namespace}} \
+      {{rotelle_release}} ./rotelle \
+      -f ./rotelle/values-dev.yaml
 
 # Uninstall rotelle (also deletes the rotelle/rotelle-system namespaces and the sim pod's PVC)
 uninstall-rotelle:
-    helm uninstall {{rotelle_release}}
+    helm uninstall \
+       -n {{rotelle_namespace}} \
+      {{rotelle_release}}
 
 # Install both charts: observability stack first, then rotelle
 install-all: install-obs install-rotelle
