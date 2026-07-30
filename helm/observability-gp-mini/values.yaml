@@ -188,6 +188,39 @@ otelGateway:
     processors:
       batch: {}
 
+      # Moves k8s_events' `k8s.event.count` from attribute (-> Loki label
+      # on gigapipe) to body text, and drops the attribute so it stops
+      # being promoted to a label at all.
+      #
+      # Kubernetes coalesces repeated identical Events (same reason +
+      # involvedObject) into ONE Event API object, incrementing its
+      # `.count` field in place rather than creating a new object per
+      # occurrence. The k8s_events receiver re-emits a new log record each
+      # time it observes that field change, with the new value on
+      # `k8s.event.count`. Since gigapipe promotes every log attribute to
+      # a stream label, every occurrence's differing count value produces
+      # a *distinct* label set — i.e. a brand-new, one-line stream every
+      # time. `count_over_time(...)` counts lines *within* a stream, so
+      # every stream permanently caps out at 1 line no matter how many
+      # times the real-world event repeats: any alert rule needing an
+      # actual occurrence count (not just "did anything match") silently
+      # can never fire. This was found via report-server's
+      # `RotellePodRestarting` rule
+      # (`count_over_time({k8s_event_reason="Started"}[5m]) > 3`), which
+      # never fired despite real, repeated restarts.
+      #
+      # The count value itself isn't dropped, just relocated: it's still
+      # readable in the body ("Container started count=17"), so nothing
+      # downstream that was reading it loses information — only its status
+      # as a label changes.
+      transform/event_count_to_body:
+        error_mode: ignore
+        log_statements:
+          - context: log
+            statements:
+              - set(body, Concat([body, " count=", String(attributes["k8s.event.count"])], ""))
+              - delete_key(attributes, "k8s.event.count")
+
     exporters:
       prometheus_remote_write:
         # In-cluster gigapipe's Prometheus remote-write endpoint — verified
@@ -225,7 +258,7 @@ otelGateway:
           exporters: [prometheus_remote_write]
         logs/events:
           receivers: [k8s_events]
-          processors: [batch]
+          processors: [transform/event_count_to_body, batch]
           exporters: [otlp_http]
 
 # ---------------------------------------------------------------------------
