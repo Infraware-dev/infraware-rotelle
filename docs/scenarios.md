@@ -13,6 +13,7 @@ Each scenario is a named failure condition activated via `POST /rotectl/cmd`.
 | `missing-env-var` | Pod exits on startup if a required env var is absent → CrashLoopBackOff |
 | `service-unreachable` | Every `GET /` hangs — simulates a Service with no matching pods |
 | `ingress-conflict` | Every 3rd request returns 502 — simulates a routing conflict |
+| `config-stale` | Serves a stale config version — models a pod ignoring a ConfigMap update |
 
 ---
 
@@ -175,6 +176,40 @@ Returns HTTP 502 on every 3rd `GET /`; other requests return 200. The counter re
 **Diagnosis value:** Reproduces the intermittent 502 errors that appear when both a LoadBalancer Service and an Ingress rule compete to route traffic to the same workload.
 
 **Hurl test:** `tests/hurl-scenario/ingress-conflict.hurl`
+
+---
+
+## config-stale
+
+**Source:** `rotelle/src/scenario/config_stale.rs`
+
+**What it simulates:** A pod serving stale configuration after a ConfigMap update.
+
+A ConfigMap consumed as environment variables is snapshotted into the pod at start and never refreshes when the ConfigMap changes — the pod keeps serving the old value until it is restarted. Activation captures a `version` string; every `GET /` renders that version, unchanged, until the scenario is re-activated with a new `version` (the manual intervention a real fix requires).
+
+Unlike every other scenario, the failure is silent and data-level: no crash, no error, no latency — just subtly wrong data.
+
+**Parameters:**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `version` | String | `v1` | The config version the pod serves on every request |
+
+**Activate:**
+```json
+{ "cmd": "set", "scenario": "config-stale", "version": "v2" }
+```
+
+**`/rotectl/status` extras:**
+```json
+{ "served_version": "v2" }
+```
+
+**Persistence:** The version is saved to `/data/state.json` and resumes automatically after a pod restart — modelling a pod that keeps serving stale config even across restarts. An explicit `reset` returns the service to idle.
+
+**Diagnosis value:** The only silent, data-level scenario. There is nothing in logs, events, or pod status to find. Diagnosis requires comparing the value the pod actually serves against the current ConfigMap — e.g. `kubectl exec <pod> -- printenv VERSION` versus `kubectl get configmap <name> -o jsonpath='{.data.VERSION}'`. Trains operators to spot config drift between running pods and the declared ConfigMap.
+
+**Hurl test:** `tests/hurl-scenario/config-stale.hurl`
 
 ---
 

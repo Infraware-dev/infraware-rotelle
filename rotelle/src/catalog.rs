@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use crate::core::registry::Factory;
 use crate::scenario::check::Check;
+use crate::scenario::config_stale::ConfigStaleScenario;
 use crate::scenario::crash_loop::CrashLoopScenario;
 use crate::scenario::idle::Idle;
 use crate::scenario::ingress_conflict::IngressConflictScenario;
@@ -24,5 +25,6 @@ pub fn all() -> Vec<Factory> {
         Box::new(|| Arc::new(ServiceUnreachableScenario::new())),
         Box::new(|| Arc::new(KeepAliveTimeoutScenario::new())),
         Box::new(|| Arc::new(IngressConflictScenario::new())),
+        Box::new(|| Arc::new(ConfigStaleScenario::new())),
     ]
 }
