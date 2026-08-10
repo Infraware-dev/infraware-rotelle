@@ -22,6 +22,9 @@ spec:
       labels:
         app: rotelle
     spec:
+      # Longer than graceful-shutdown-failure's default ignore_secs (30) so both
+      # training paths are observable — see docs/scenarios.md.
+      terminationGracePeriodSeconds: 60
       containers:
         - name: rotelle
           image: ghcr.io/infraware-dev/infraware-rotelle:latest

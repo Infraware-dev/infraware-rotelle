@@ -14,6 +14,7 @@ Each scenario is a named failure condition activated via `POST /rotectl/cmd`.
 | `service-unreachable` | Every `GET /` hangs — simulates a Service with no matching pods |
 | `ingress-conflict` | Every 3rd request returns 502 — simulates a routing conflict |
 | `config-stale` | Serves a stale config version — models a pod ignoring a ConfigMap update |
+| `graceful-shutdown-failure` | Ignores SIGTERM while still serving → dropped connections on rollout |
 
 ---
 
@@ -210,6 +211,51 @@ Unlike every other scenario, the failure is silent and data-level: no crash, no 
 **Diagnosis value:** The only silent, data-level scenario. There is nothing in logs, events, or pod status to find. Diagnosis requires comparing the value the pod actually serves against the current ConfigMap — e.g. `kubectl exec <pod> -- printenv VERSION` versus `kubectl get configmap <name> -o jsonpath='{.data.VERSION}'`. Trains operators to spot config drift between running pods and the declared ConfigMap.
 
 **Hurl test:** `tests/hurl-scenario/config-stale.hurl`
+
+---
+
+## graceful-shutdown-failure
+
+**Source:** `rotelle/src/scenario/graceful_shutdown_failure.rs`
+
+**What it simulates:** A pod that ignores SIGTERM during a rolling update.
+
+Kubernetes sends SIGTERM and waits `terminationGracePeriodSeconds`. While this scenario is active the process swallows the signal for `ignore_secs`, keeps answering `GET /` with 200, and only then exits — so in-flight requests are severed when the kubelet's SIGKILL lands. When the scenario is inactive, rotelle exits promptly on SIGTERM.
+
+**Parameters:**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `ignore_secs` | u64 | `30` | How long SIGTERM is ignored while the pod keeps serving |
+
+**Activate:**
+```json
+{ "cmd": "set", "scenario": "graceful-shutdown-failure", "ignore_secs": 90 }
+```
+
+**`/rotectl/status` extras:**
+```json
+{ "ignore_secs": 90, "armed": true, "requests_served": 12 }
+```
+
+**Triggering it:** the failure only appears on a pod lifecycle event.
+
+```bash
+kubectl -n rotelle get pod -w &
+kubectl -n rotelle delete pod -l app=rotelle    # or: kubectl exec <pod> -- kill -TERM 1
+```
+
+With `terminationGracePeriodSeconds: 60` in the manifests, `ignore_secs=30` shows a delete blocked for 30 s that then exits cleanly; `ignore_secs=90` shows the pod SIGKILLed with requests in flight. Keep traffic flowing during the delete (`while true; do curl -s -o /dev/null -w '%{http_code}\n' <url>/; done`) to see the resets.
+
+Locally, Ctrl-C sends SIGINT, which is unhandled — use `kill -TERM <pid>` instead.
+
+**Persistence:** `ignore_secs` is saved to `/data/state.json` and re-arms on restart, so the next rollout fails the same way until an explicit `reset`.
+
+**Diagnosis value:** Trains operators to spot a missing `preStop` hook and improper shutdown handling. Symptoms appear only during pod lifecycle events — a blocking `kubectl delete pod` waits out the entire window, pods sit in `Terminating` far longer than expected while still `Ready` and serving traffic, and clients see connection resets when the kubelet's SIGKILL lands. Every probe stays green throughout, so nothing in pod status or events points at the cause.
+
+Note that `kubectl rollout status` may report success while the doomed pod is still `Terminating`: recent Kubernetes versions account for terminating pods separately (`ReplicaSet.status.terminatingReplicas`) and no longer hold the rollout open for them. `kubectl get pod -w` is the reliable signal.
+
+**Hurl test:** `tests/hurl-scenario/graceful-shutdown-failure.hurl`
 
 ---
 

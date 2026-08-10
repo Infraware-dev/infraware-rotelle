@@ -35,7 +35,7 @@ pub async fn index(state: Data<&AppState>) -> Response {
             let status = StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
             (status, Html(html)).into_response()
         }
-                IndexEffect::RespondThenClose(body) => {
+        IndexEffect::RespondThenClose(body) => {
             let mut response =
                 Html(page_html(name, &body, &state.control_url, &state.sim_url)).into_response();
             response.headers_mut().insert(
