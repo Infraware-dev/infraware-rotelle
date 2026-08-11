@@ -1,0 +1,91 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "observability-gp-mini.otelGateway.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "observability-gp-mini.componentLabels" (dict "ctx" . "component" "otel-gateway") | nindent 4 }}
+spec:
+  replicas: {{ .Values.otelGateway.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "observability-gp-mini.componentSelectorLabels" (dict "ctx" . "component" "otel-gateway") | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/otel-gateway/configmap.yaml") . | sha256sum }}
+        {{- with .Values.otelGateway.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "observability-gp-mini.componentSelectorLabels" (dict "ctx" . "component" "otel-gateway") | nindent 8 }}
+        {{- with .Values.otelGateway.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      serviceAccountName: {{ include "observability-gp-mini.otelGateway.serviceAccountName" . }}
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: otel-gateway
+          image: "{{ .Values.otelGateway.image.repository }}:{{ .Values.otelGateway.image.tag }}"
+          imagePullPolicy: {{ .Values.otelGateway.image.pullPolicy }}
+          args:
+            - --config=/etc/otel/config.yaml
+          ports:
+            - name: otlp-http
+              containerPort: 4318
+              protocol: TCP
+            - name: health
+              containerPort: 13133
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /
+              port: health
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            {{- toYaml .Values.otelGateway.resources | nindent 12 }}
+          volumeMounts:
+            - name: cfg
+              mountPath: /etc/otel
+            - name: storage
+              mountPath: /var/lib/otelcol/storage
+      volumes:
+        - name: cfg
+          configMap:
+            name: {{ include "observability-gp-mini.otelGateway.fullname" . }}
+        # Backs extensions.file_storage in config.yaml — the container
+        # filesystem is otherwise read-only (securityContext above), and
+        # the k8s_events receiver's storage checkpoint needs somewhere
+        # writable. emptyDir, not a PVC: losing the checkpoint on
+        # pod reschedule just means replaying recent events once, not data
+        # loss.
+        - name: storage
+          emptyDir: {}
+      {{- with .Values.otelGateway.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.otelGateway.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.otelGateway.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

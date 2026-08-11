@@ -72,6 +72,10 @@ run-scenario FILE:
 
 # Run the control-path smoke test (check.hurl). For per-scenario tests use run-scenario.
 test-hurl:
+    @curl --fail --silent {{rotelle_service_host}}/rotectl/health > /dev/null || \
+      (echo "Rotelle is not reachable at {{rotelle_service_host}}. Start the current build with 'just run' in another terminal."; exit 1)
+    @curl --fail --silent {{rotelle_service_host}}/rotelle-mark.png > /dev/null || \
+      (echo "Rotelle is running at {{rotelle_service_host}}, but it is stale. Stop it with Ctrl+C and restart it with 'just run'."; exit 1)
     hurl \
       --test \
       --variable rotelle_service_host={{rotelle_service_host}} \

@@ -1,0 +1,104 @@
+# Default values for rotelle: the simulation pod (rotelle) and its
+# crash-isolated control pod (rotelle-control). Mirrors k8s/rotelle.yaml +
+# k8s/rotelle-control.yaml, parameterized.
+#
+# Per docs/architecture.md, the two pods deploy into two separate
+# namespaces by default — not just organizational, this is what keeps the
+# control pod reachable when a scenario takes the sim pod's own namespace
+# down with it (e.g. resource exhaustion). Both are created automatically
+# unless createNamespaces is turned off.
+createNamespaces: true
+
+image:
+  repository: ghcr.io/infraware-dev/infraware-rotelle
+  tag: "v0.1.3"
+  pullPolicy: IfNotPresent
+
+# ---------------------------------------------------------------------------
+# sim — the simulation pod: runs scenarios, serves the failure surface and
+# its own built-in /rotectl/* API (full mode).
+# ---------------------------------------------------------------------------
+sim:
+  enabled: true
+
+  namespace: rotelle
+
+  # Pins the Service/Deployment name so control.simApiUrl (in
+  # templates/control/deployment.yaml) and the FQDN it builds from
+  # this + namespace above stay correct regardless of release name.
+  fullnameOverride: rotelle
+
+  replicaCount: 1
+
+  service:
+    # LoadBalancer provisions a public IP with no authentication on cloud
+    # providers (EKS/GKE/AKS) — fine for a throwaway training cluster, not
+    # for anything reachable from the internet. Switch to ClusterIP and
+    # use kubectl port-forward for anything else.
+    type: LoadBalancer
+    port: 8080
+
+  # Browser-facing URL of the separate control pod, used for the "Control"
+  # nav link on the sim UI. Leave blank to fall back to the sim pod's own
+  # built-in control panel at /rotectl/control (fine if control.enabled is
+  # false, or you don't need crash-isolated control access).
+  controlUrl: ""
+
+  persistence:
+    # PVC for /data/state.json so the active scenario survives pod restarts.
+    # Disable to fall back to emptyDir (state lost on restart/reschedule).
+    enabled: true
+    size: 10Mi
+    storageClass: ""
+
+  resources:
+    requests:
+      memory: 32Mi
+    limits:
+      memory: 64Mi
+
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# ---------------------------------------------------------------------------
+# control — the always-responsive control pod: proxies commands to the sim
+# pod's API over HTTP and stays up even when the sim pod is hung, crashing,
+# or OOM-killed.
+# ---------------------------------------------------------------------------
+control:
+  enabled: true
+
+  namespace: rotelle-system
+
+  fullnameOverride: rotelle-control
+
+  replicaCount: 1
+
+  port: 9090
+
+  service:
+    type: ClusterIP
+    port: 9090
+
+  # Browser-facing URL of the sim service, used for the "Status" nav link in
+  # the control panel. Set this to whatever URL your browser uses to reach
+  # the sim pod — e.g. the LoadBalancer's external address, or
+  # http://localhost:8080 if you're port-forwarding it. Left blank, the
+  # control panel's "Status" link defaults to relative ("/"), which won't
+  # resolve from a separate pod.
+  simUrl: ""
+
+  resources:
+    requests:
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}

@@ -1,0 +1,28 @@
+apiVersion: v2
+name: observability-gp-mini
+description: Minimal reference observability stack for gigapipe (qryn) — OTLP metrics/logs, Kubernetes events, and node-level telemetry, one chart
+type: application
+
+# Chart version — bump on chart changes, independent of any component image.
+version: 0.3.0
+
+# Nominal: this chart bundles several components (see below), each pinning
+# its own image tag in values.yaml — there is no single "app version" to track.
+appVersion: "0.3.0"
+
+kubeVersion: ">=1.23.0-0"
+
+home: https://github.com/Infraware-dev/infraware-rotelle
+sources:
+  - https://github.com/Infraware-dev/infraware-rotelle
+  - https://github.com/metrico/qryn
+  - https://github.com/open-telemetry/opentelemetry-collector-contrib
+maintainers:
+  - name: Infraware S.R.L.
+    email: info@infraware.it
+
+dependencies:
+  - name: gigapipe
+    version: "0.3.0"
+    repository: "https://metrico.github.io/gigapipe-helm/"
+    condition: gigapipe.enabled

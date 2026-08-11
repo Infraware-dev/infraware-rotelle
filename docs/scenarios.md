@@ -14,6 +14,7 @@ Each scenario is a named failure condition activated via `POST /rotectl/cmd`.
 | `service-unreachable` | Every `GET /` hangs — simulates a Service with no matching pods |
 | `ingress-conflict` | Every 3rd request returns 502 — simulates a routing conflict |
 | `config-stale` | Serves a stale config version — models a pod ignoring a ConfigMap update |
+| `slow-response` | Every `GET /` is delayed — simulates a degraded pod that exceeds readiness probe timeouts |
 
 ---
 
@@ -179,37 +180,35 @@ Returns HTTP 502 on every 3rd `GET /`; other requests return 200. The counter re
 
 ---
 
-## config-stale
+## slow-response
 
-**Source:** `rotelle/src/scenario/config_stale.rs`
+**Source:** `rotelle/src/scenario/slow_response.rs`
 
-**What it simulates:** A pod serving stale configuration after a ConfigMap update.
+**What it simulates:** A pod that is alive but degraded — responding so slowly it exceeds readiness probe timeouts. This models a slow upstream dependency (slow DB query, blocked I/O) that causes the pod to be marked `NotReady` and removed from Service endpoints without ever crashing.
 
-A ConfigMap consumed as environment variables is snapshotted into the pod at start and never refreshes when the ConfigMap changes — the pod keeps serving the old value until it is restarted. Activation captures a `version` string; every `GET /` renders that version, unchanged, until the scenario is re-activated with a new `version` (the manual intervention a real fix requires).
-
-Unlike every other scenario, the failure is silent and data-level: no crash, no error, no latency — just subtly wrong data.
+Every `GET /` sleeps for `delay_ms` milliseconds before responding 200 (the async task sleeps; the thread pool stays unblocked). The control plane (`/rotectl/*`) remains instant so the scenario can be reset while requests are slow.
 
 **Parameters:**
 
 | Field | Type | Default | Description |
 |---|---|---|---|
-| `version` | String | `v1` | The config version the pod serves on every request |
+| `delay_ms` | u64 | 2000 | Milliseconds to sleep before each `GET /` response |
 
 **Activate:**
 ```json
-{ "cmd": "set", "scenario": "config-stale", "version": "v2" }
+{ "cmd": "set", "scenario": "slow-response", "delay_ms": 2000 }
 ```
 
 **`/rotectl/status` extras:**
 ```json
-{ "served_version": "v2" }
+{ "delay_ms": 2000 }
 ```
 
-**Persistence:** The version is saved to `/data/state.json` and resumes automatically after a pod restart — modelling a pod that keeps serving stale config even across restarts. An explicit `reset` returns the service to idle.
+**Diagnosis value:** Helps operators distinguish a crashed pod from a degraded one. The pod is running and logs are clean — only response-time metrics and readiness probe events reveal the issue. Good for training on `kubectl describe pod` readiness-probe failure events.
 
-**Diagnosis value:** The only silent, data-level scenario. There is nothing in logs, events, or pod status to find. Diagnosis requires comparing the value the pod actually serves against the current ConfigMap — e.g. `kubectl exec <pod> -- printenv VERSION` versus `kubectl get configmap <name> -o jsonpath='{.data.VERSION}'`. Trains operators to spot config drift between running pods and the declared ConfigMap.
+**Note:** The default manifest's readiness probe targets `/rotectl/health` (which stays fast by design), not `GET /`. To observe an actual readiness-probe `Unhealthy` event, point a probe at `/` with a `timeoutSeconds` lower than `delay_ms`.
 
-**Hurl test:** `tests/hurl-scenario/config-stale.hurl`
+**Hurl test:** `tests/hurl-scenario/slow-response.hurl`
 
 ---
 
