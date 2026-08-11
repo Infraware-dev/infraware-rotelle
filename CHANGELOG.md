@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 <!-- Maintained manually. Add a new entry as part of the release checklist in RELEASING.md. -->
 
+## [0.2.0] - 2026-08-11
+
+### Changed
+
+- feat: establish a distinct Rotelle UI identity
+
 ## [0.1.4] - 2026-07-27
 
 ### Changed
