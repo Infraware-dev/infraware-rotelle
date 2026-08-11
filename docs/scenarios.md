@@ -13,6 +13,7 @@ Each scenario is a named failure condition activated via `POST /rotectl/cmd`.
 | `missing-env-var` | Pod exits on startup if a required env var is absent → CrashLoopBackOff |
 | `service-unreachable` | Every `GET /` hangs — simulates a Service with no matching pods |
 | `ingress-conflict` | Every 3rd request returns 502 — simulates a routing conflict |
+| `config-stale` | Serves a stale config version — models a pod ignoring a ConfigMap update |
 | `slow-response` | Every `GET /` is delayed — simulates a degraded pod that exceeds readiness probe timeouts |
 
 ---
