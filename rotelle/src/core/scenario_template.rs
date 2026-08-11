@@ -145,170 +145,178 @@ pub enum IndexEffect {
 // ── Shared styles ─────────────────────────────────────────────────────────────
 
 const SHARED_CSS: &str = r#"
-    /* Ensure [hidden] is respected even when an element has an explicit display value. */
-    [hidden] { display: none !important; }
+    :root {
+      color-scheme: light;
+      --canvas: #f3eee4;
+      --canvas-grid: rgba(71, 62, 50, 0.08);
+      --surface: #fffaf1;
+      --surface-raised: #fffdf8;
+      --surface-muted: #ebe4d7;
+      --ink: #20251f;
+      --ink-soft: #5f625b;
+      --ink-faint: #6b6c64;
+      --line: #d6cdbc;
+      --line-strong: #a89d8a;
+      --accent: #c74422;
+      --accent-hover: #a93418;
+      --accent-soft: #f7d7c7;
+      --healthy: #256b4a;
+      --healthy-soft: #dcecdf;
+      --warning: #92570d;
+      --warning-soft: #f5e6c7;
+      --danger: #a8332b;
+      --danger-soft: #f3d9d5;
+      --focus: #185f83;
+      --shadow: 0 22px 55px rgba(66, 54, 37, 0.13);
+      --mono: 'SFMono-Regular', Consolas, 'Liberation Mono', ui-monospace, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
 
+    [hidden] { display: none !important; }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
-      background: #0C0C0E;
-      color: #F4F5F7;
       min-height: 100vh;
-      padding: 4.5rem 2.5rem;
+      padding: clamp(1.25rem, 5vw, 4.5rem) clamp(1rem, 4vw, 2.5rem);
+      color: var(--ink);
+      background-color: var(--canvas);
+      background-image:
+        linear-gradient(var(--canvas-grid) 1px, transparent 1px),
+        linear-gradient(90deg, var(--canvas-grid) 1px, transparent 1px),
+        radial-gradient(circle at 85% 0%, rgba(228, 90, 50, 0.16), transparent 30rem);
+      background-size: 32px 32px, 32px 32px, auto;
+      font-family: var(--sans);
     }
 
-    .container {
-      max-width: 760px;
-      margin: 0 auto;
-    }
+    a, button, input { -webkit-tap-highlight-color: transparent; }
+    :focus-visible { outline: 3px solid var(--focus); outline-offset: 3px; }
 
-    .logo {
-      margin-bottom: 3.5rem;
+    .container { width: min(100%, 840px); margin: 0 auto; }
+    .site-header {
       display: flex;
       align-items: center;
-      gap: 1.1rem;
+      gap: 1.5rem;
+      margin-bottom: clamp(2rem, 6vw, 3.75rem);
     }
-    .logo-img { height: 64px; width: auto; filter: invert(1); }
-    .logo-divider {
-      width: 1px;
-      height: 36px;
-      background: #2A2A2D;
-      flex-shrink: 0;
+    .brand-lockup { display: flex; align-items: center; gap: 0.75rem; }
+    .brand-mark-link { display: flex; flex: 0 0 auto; }
+    .brand-mark { width: 48px; height: 48px; flex: 0 0 auto; filter: drop-shadow(0 5px 8px rgba(88, 55, 37, 0.2)); }
+    .brand-copy { display: grid; gap: 0.2rem; }
+    .brand-name { color: inherit; font-size: 1.6rem; font-weight: 800; letter-spacing: -0.055em; line-height: 1; text-decoration: none; }
+    .brand-tagline, .footer-credit {
+      color: var(--ink-faint);
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.02em;
+      line-height: 1.4;
     }
-    .logo-subtitle {
-      font-size: 1.1rem;
-      text-transform: uppercase;
-      letter-spacing: 0.2em;
-      color: #85868C;
-      font-weight: 700;
-    }
+    .brand-tagline a, .footer-credit a { color: inherit; text-decoration-color: var(--line-strong); text-underline-offset: 0.2em; }
+    .brand-tagline a:hover, .footer-credit a:hover { color: var(--accent); }
 
-    .header-nav { margin-left: auto; display: flex; gap: 0.5rem; align-items: center; }
+    .header-nav { margin-left: auto; display: flex; gap: 0.4rem; align-items: center; }
     .nav-link {
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: #85868C;
+      padding: 0.58em 1em;
+      border: 1px solid transparent;
+      border-radius: 9px;
+      color: var(--ink-soft);
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
       text-decoration: none;
-      padding: 0.4em 1.1em;
-      border-radius: 20px;
-      letter-spacing: 0.03em;
-      border: 1.5px solid #2A2A2D;
-      background: transparent;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
+      transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
     }
-    .nav-link:hover {
-      background: rgba(255,255,255,0.04);
-      color: #C8C9CD;
-      border-color: #54555C;
-    }
-    .nav-link.nav-active {
-      background: #2A2A2D;
-      color: #ECEDF0;
-      border-color: #2A2A2D;
-    }
-    .nav-link.nav-active:hover {
-      background: #2A2A2D;
-      border-color: #54555C;
-    }
+    .nav-link:hover { border-color: var(--line); background: rgba(255, 250, 241, 0.7); color: var(--ink); }
+    .nav-link.nav-active { border-color: var(--ink); background: var(--ink); color: var(--surface); }
 
     .card {
-      background: #161618;
-      border: 1px solid #2A2A2D;
-      border-radius: 12px;
+      position: relative;
       overflow: visible;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+      border: 1px solid var(--line-strong);
+      border-radius: 18px;
+      background: var(--surface-raised);
+      box-shadow: var(--shadow);
     }
-
+    .card::before {
+      position: absolute;
+      z-index: -1;
+      inset: 10px -10px -10px 10px;
+      border: 1px solid rgba(199, 68, 34, 0.35);
+      border-radius: 18px;
+      content: '';
+    }
     .card-header {
-      padding: 1.5rem 2.5rem;
-      border-bottom: 1px solid #2A2A2D;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: #111113;
-      border-radius: 12px 12px 0 0;
+      padding: 1.25rem clamp(1.25rem, 5vw, 2.5rem);
+      border-bottom: 1px solid var(--line);
+      border-radius: 18px 18px 0 0;
+      background: var(--surface-muted);
     }
-    .card-label {
-      font-size: 0.9rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #74757B;
+    .card-label, .scenario-label, .details-label, .switch-label {
+      color: var(--ink-soft);
+      font-family: var(--mono);
+      font-size: 0.75rem;
       font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
     }
     .status-pill {
       display: flex;
       align-items: center;
       gap: 8px;
-      background: rgba(22,163,74,0.08);
-      border: 1px solid rgba(22,163,74,0.22);
-      border-radius: 20px;
-      padding: 0.4em 1.1em;
+      padding: 0.42em 0.85em;
+      border: 1px solid #a7c9b0;
+      border-radius: 8px;
+      background: var(--healthy-soft);
     }
-    .status-dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #16a34a;
-      box-shadow: 0 0 6px rgba(22,163,74,0.6);
-    }
-    .status-text { font-size: 0.875rem; color: #15803d; font-weight: 600; letter-spacing: 0.04em; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--healthy); box-shadow: 0 0 0 3px rgba(37, 107, 74, 0.13); }
+    .status-text { color: var(--healthy); font-family: var(--mono); font-size: 0.78rem; font-weight: 700; letter-spacing: 0.03em; }
 
-    .card-body { padding: 2.5rem; }
-
-    .scenario-label {
-      font-size: 0.875rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #74757B;
-      font-weight: 700;
-      margin-bottom: 0.65rem;
-    }
+    .card-body { padding: clamp(1.5rem, 6vw, 3rem); }
+    .scenario-label { margin-bottom: 0.7rem; }
     .scenario-name {
-      font-size: 1.85rem;
-      font-weight: 700;
-      letter-spacing: -0.02em;
-      color: #ECEDF0;
-      line-height: 1.15;
-      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', ui-monospace, monospace;
-      margin-bottom: 0.6rem;
+      margin-bottom: 0.7rem;
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: clamp(1.65rem, 5vw, 2.35rem);
+      font-weight: 750;
+      letter-spacing: -0.055em;
+      line-height: 1.1;
+      overflow-wrap: anywhere;
     }
-    .scenario-description { font-size: 1rem; color: #85868C; line-height: 1.5; }
-
-    .details-section {
-      margin-top: 1.75rem;
-      padding-top: 1.75rem;
-      border-top: 1px solid #2A2A2D;
-    }
+    .scenario-name::before { color: var(--accent); content: './'; font-weight: 500; }
+    .scenario-description { max-width: 60ch; color: var(--ink-soft); font-size: 1rem; line-height: 1.65; }
+    .details-section { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px dashed var(--line-strong); }
     .details-section:has(.card-extra:empty) { display: none; }
-    .details-label {
-      font-size: 0.875rem;
-      text-transform: uppercase;
-      letter-spacing: 0.12em;
-      color: #74757B;
-      font-weight: 700;
-      margin-bottom: 0.65rem;
-    }
-    .card-extra { color: #C8C9CD; font-size: 1.2rem; font-weight: 500; line-height: 1.75; }
+    .details-label { margin-bottom: 0.75rem; }
+    .card-extra { color: var(--ink-soft); font-size: 1.05rem; font-weight: 500; line-height: 1.75; }
     .card-extra p { margin: 0; }
-    .card-extra strong { color: #F4F5F7; font-weight: 600; }
+    .card-extra strong { color: var(--ink); font-weight: 700; }
     .card-extra code {
-      font-family: 'SF Mono', ui-monospace, monospace;
-      font-size: 0.9em;
-      background: rgba(255,255,255,0.06);
-      border: 1px solid #2A2A2D;
+      padding: 0.17em 0.45em;
+      border: 1px solid #e1ae97;
       border-radius: 5px;
-      padding: 0.15em 0.45em;
-      color: #C8C9CD;
+      background: var(--accent-soft);
+      color: #7e2a14;
+      font-family: var(--mono);
+      font-size: 0.88em;
+    }
+    .card-footer { padding: 1rem clamp(1.25rem, 5vw, 2.5rem); border-top: 1px solid var(--line); border-radius: 0 0 18px 18px; background: #f7f0e4; }
+
+    @media (max-width: 620px) {
+      .site-header { align-items: flex-start; flex-wrap: wrap; gap: 1rem; }
+      .brand-mark { width: 42px; height: 42px; }
+      .header-nav { width: 100%; margin-left: 0; }
+      .nav-link { flex: 1; text-align: center; }
+      .card::before { inset: 6px -6px -6px 6px; }
+      .card-header { align-items: flex-start; gap: 0.75rem; }
     }
 
-    .card-footer {
-      padding: 1.25rem 2.5rem;
-      border-top: 1px solid #2A2A2D;
-      background: #111113;
-      border-radius: 0 0 12px 12px;
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
     }
-    .footer-text { font-size: 0.9rem; color: #74757B; letter-spacing: 0.02em; }
 "#;
 
 // ── Control-page styles ───────────────────────────────────────────────────────
@@ -583,6 +591,108 @@ const CONTROL_CSS: &str = r#"
       background: rgba(220,38,38,0.06);
       border: 1px solid rgba(220,38,38,0.18);
     }
+
+    /* Rotelle control surface */
+    .section-divider { margin-top: 2rem; padding-top: 1.75rem; border-top: 1px dashed var(--line-strong); }
+    .switch-label { margin-bottom: 1rem; }
+    .active-scenario-row { gap: 2rem; }
+
+    .sim-status {
+      gap: 7px;
+      align-self: center;
+      padding: 0.48em 0.8em;
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+    .sim-dot { width: 7px; height: 7px; }
+    .sim-status-ok { color: var(--healthy); background: var(--healthy-soft); border-color: #a7c9b0; }
+    .sim-status-ok .sim-dot { background: var(--healthy); box-shadow: 0 0 0 3px rgba(37, 107, 74, 0.13); }
+    .sim-status-crashed { color: var(--warning); background: var(--warning-soft); border-color: #d8bc7f; }
+    .sim-status-crashed .sim-dot { background: var(--warning); box-shadow: 0 0 0 3px rgba(146, 87, 13, 0.12); }
+    .sim-status-down { color: var(--danger); background: var(--danger-soft); border-color: #d9aaa4; }
+    .sim-status-down .sim-dot { background: var(--danger); box-shadow: 0 0 0 3px rgba(168, 51, 43, 0.12); }
+
+    .combobox { margin-bottom: 1.25rem; }
+    .combobox-trigger {
+      min-height: 48px;
+      padding: 0.7em 1em;
+      border-color: var(--line-strong);
+      border-radius: 9px;
+      background: var(--surface);
+      color: var(--ink);
+      font-family: var(--mono);
+      font-size: 0.88rem;
+    }
+    .combobox-trigger:hover { border-color: var(--accent); }
+    .combobox-trigger.is-open { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(199, 68, 34, 0.14); }
+    .combobox-chevron { color: var(--accent); }
+    .combobox-panel {
+      border-color: var(--accent);
+      border-radius: 0 0 10px 10px;
+      background: var(--surface-raised);
+      box-shadow: 0 16px 30px rgba(66, 54, 37, 0.18);
+    }
+    .combobox-search-wrap { border-color: var(--line); background: #f8f1e5; }
+    .combobox-search-icon { color: var(--ink-faint); }
+    .combobox-search {
+      min-height: 40px;
+      border-color: var(--line);
+      background: var(--surface-raised);
+      color: var(--ink);
+      font-family: var(--sans);
+    }
+    .combobox-search:focus { border-color: var(--focus); box-shadow: 0 0 0 2px rgba(24, 95, 131, 0.12); }
+    .combobox-list { max-height: 300px; padding: 0.4rem; }
+    .combobox-option { border: 1px solid transparent; border-radius: 7px; padding: 0.72rem 0.85rem; }
+    .combobox-option:hover, .combobox-option.is-focused { border-color: #edc0ac; background: #fbebdf; }
+    .combobox-option.is-selected { border-color: #e1ae97; background: var(--accent-soft); }
+    .combobox-option-name { color: var(--ink); font-family: var(--mono); }
+    .active-dot { background: var(--accent); }
+    .combobox-option-desc { color: var(--ink-soft); }
+    .combobox-no-results { color: var(--ink-faint); }
+
+    .params-for { color: var(--ink-faint); font-family: var(--mono); }
+    .params-section { gap: 0.75rem; padding: 1.15rem 1.25rem; border-color: var(--line); border-radius: 10px; background: #f7f0e4; }
+    .param-row { gap: 0.75rem; }
+    .param-label { color: var(--ink-soft); font-family: var(--mono); }
+    .param-input {
+      min-height: 38px;
+      border-color: var(--line-strong);
+      border-radius: 7px;
+      background: var(--surface-raised);
+      color: var(--ink);
+      font-family: var(--mono);
+    }
+    .param-input:focus { border-color: var(--focus); box-shadow: 0 0 0 3px rgba(24, 95, 131, 0.12); }
+
+    .submit-btn, .submit-btn-outline {
+      justify-content: center;
+      min-height: 44px;
+      border-radius: 9px;
+      font-family: var(--mono);
+      font-size: 0.82rem;
+    }
+    .submit-btn { border: 1px solid var(--accent); background: var(--accent); color: #fffaf1; box-shadow: 0 5px 12px rgba(199, 68, 34, 0.18); }
+    .submit-btn:hover { background: var(--accent-hover); }
+    .submit-btn-outline { border-color: var(--ink); color: var(--ink); }
+    .submit-btn-outline:hover { border-color: var(--accent); background: var(--accent-soft); color: #7e2a14; }
+    .submit-btn:disabled, .submit-btn-outline:disabled { opacity: 0.55; }
+    .feedback { border-radius: 8px; font-family: var(--mono); font-size: 0.78rem; }
+    .feedback.feedback-ok { color: var(--healthy); background: var(--healthy-soft); border-color: #a7c9b0; }
+    .feedback.feedback-err { color: var(--danger); background: var(--danger-soft); border-color: #d9aaa4; }
+
+    @media (max-width: 620px) {
+      .active-scenario-row { flex-direction: column; gap: 1rem; }
+      .sim-status { align-self: flex-start; }
+      .param-row { align-items: stretch; flex-direction: column; }
+      .param-label { min-width: 0; }
+      .param-input { width: 100% !important; }
+      .form-footer { align-items: stretch; flex-direction: column; }
+      .submit-btn, .submit-btn-outline { width: 100%; }
+    }
 "#;
 
 // ── Control-page script ───────────────────────────────────────────────────────
@@ -606,28 +716,68 @@ const CONTROL_JS: &str = r#"
   var paramsBtn     = document.getElementById('params-btn');
   var paramsFb      = document.getElementById('params-feedback');
   var simBadge      = document.getElementById('sim-badge');
+  var focusedIndex  = -1;
 
   /* ── Combobox ───────────────────────────────────────────────────────── */
-  function openPanel() {
+  function visibleOptions() {
+    return Array.prototype.filter.call(
+      document.querySelectorAll('.combobox-option'),
+      function (opt) { return !opt.hidden; }
+    );
+  }
+
+  function focusOption(index) {
+    var options = visibleOptions();
+    document.querySelectorAll('.combobox-option').forEach(function (opt) {
+      opt.classList.remove('is-focused');
+    });
+    if (!options.length) {
+      focusedIndex = -1;
+      searchInput.removeAttribute('aria-activedescendant');
+      return;
+    }
+    focusedIndex = (index + options.length) % options.length;
+    var option = options[focusedIndex];
+    option.classList.add('is-focused');
+    searchInput.setAttribute('aria-activedescendant', option.id);
+    option.scrollIntoView({ block: 'nearest' });
+  }
+
+  function openPanel(preferredIndex) {
     panel.hidden = false;
     trigger.classList.add('is-open');
+    trigger.setAttribute('aria-expanded', 'true');
     searchInput.value = '';
     filterOptions('');
     searchInput.focus();
+    var options = visibleOptions();
+    var selectedIndex = options.findIndex(function (opt) {
+      return opt.dataset.value === hiddenInput.value;
+    });
+    focusOption(typeof preferredIndex === 'number' ? preferredIndex : Math.max(selectedIndex, 0));
   }
 
   function closePanel() {
     panel.hidden = true;
     trigger.classList.remove('is-open');
+    trigger.setAttribute('aria-expanded', 'false');
+    focusedIndex = -1;
+    searchInput.removeAttribute('aria-activedescendant');
+    document.querySelectorAll('.combobox-option').forEach(function (opt) {
+      opt.classList.remove('is-focused');
+    });
   }
 
   function selectScenario(value) {
     hiddenInput.value = value;
     currentLbl.textContent = value;
-    closePanel();
     document.querySelectorAll('.combobox-option').forEach(function (opt) {
-      opt.classList.toggle('is-selected', opt.dataset.value === value);
+      var selected = opt.dataset.value === value;
+      opt.classList.toggle('is-selected', selected);
+      opt.setAttribute('aria-selected', selected ? 'true' : 'false');
     });
+    closePanel();
+    trigger.focus();
   }
 
   function filterOptions(query) {
@@ -641,21 +791,57 @@ const CONTROL_JS: &str = r#"
       if (show) any = true;
     });
     if (noResults) noResults.hidden = any;
+    focusOption(0);
   }
 
   trigger.addEventListener('click', function () {
     if (panel.hidden) { openPanel(); } else { closePanel(); }
   });
+  trigger.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (panel.hidden) openPanel(e.key === 'ArrowUp' ? -1 : 0);
+    }
+  });
   searchInput.addEventListener('input', function () { filterOptions(this.value); });
+  searchInput.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusOption(focusedIndex + 1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      focusOption(focusedIndex - 1);
+    } else if (e.key === 'Enter') {
+      var options = visibleOptions();
+      if (focusedIndex >= 0 && options[focusedIndex]) {
+        e.preventDefault();
+        selectScenario(options[focusedIndex].dataset.value);
+      }
+    } else if (e.key === 'Home') {
+      e.preventDefault();
+      focusOption(0);
+    } else if (e.key === 'End') {
+      e.preventDefault();
+      focusOption(-1);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      closePanel();
+      trigger.focus();
+    } else if (e.key === 'Tab') {
+      closePanel();
+    }
+  });
   comboList.addEventListener('click', function (e) {
     var opt = e.target.closest('.combobox-option');
     if (opt && !opt.hidden) { selectScenario(opt.dataset.value); }
   });
+  comboList.addEventListener('mousemove', function (e) {
+    var opt = e.target.closest('.combobox-option');
+    if (!opt || opt.hidden) return;
+    focusOption(visibleOptions().indexOf(opt));
+  });
   document.addEventListener('click', function (e) {
     if (combobox && !combobox.contains(e.target)) { closePanel(); }
-  });
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape') { closePanel(); }
   });
 
   /* ── Shared POST helper ─────────────────────────────────────────────── */
@@ -758,19 +944,39 @@ fn logo_nav_html(active_href: &str, sim_url: &str, control_url: &str) -> String 
         } else {
             ""
         };
-        format!(r#"<a href="{control_url}" class="nav-link{active}">Control</a>"#)
+        let current = if active_href != "/" {
+            r#" aria-current="page""#
+        } else {
+            ""
+        };
+        format!(r#"<a href="{control_url}" class="nav-link{active}"{current}>Control</a>"#)
+    };
+    let status_current = if active_href == "/" {
+        r#" aria-current="page""#
+    } else {
+        ""
     };
     format!(
-        r#"<div class="logo">
-      <img class="logo-img" src="/logo.png" alt="infraware.dev">
-      <div class="logo-divider"></div>
-      <span class="logo-subtitle">rotelle</span>
-      <nav class="header-nav">
-        <a href="{sim_url}" class="nav-link{status_active}">Status</a>
+        r#"<header class="site-header">
+      <div class="brand-lockup">
+        <a class="brand-mark-link" href="{sim_url}" aria-label="Rotelle status">
+          <img class="brand-mark" src="/rotelle-mark.png" alt="">
+        </a>
+        <span class="brand-copy">
+          <a class="brand-name" href="{sim_url}">rotelle</a>
+          <span class="brand-tagline">open-source chaos lab by <a href="https://infraware.dev">infraware.dev</a></span>
+        </span>
+      </div>
+      <nav class="header-nav" aria-label="Primary navigation">
+        <a href="{sim_url}" class="nav-link{status_active}"{status_current}>Status</a>
         {control_link}
       </nav>
-    </div>"#
+    </header>"#
     )
+}
+
+fn footer_credit_html() -> &'static str {
+    r#"<span class="footer-credit">Rotelle is an open-source chaos lab by <a href="https://infraware.dev">infraware.dev</a></span>"#
 }
 
 /// Renders param input rows for the currently active scenario (always visible, no hidden wrapper).
@@ -781,7 +987,7 @@ fn build_active_params_html(params: &ActivationParams) -> String {
     let mut keys: Vec<&String> = params.0.keys().collect();
     keys.sort();
     let mut rows = String::new();
-    for key in keys {
+    for (index, key) in keys.into_iter().enumerate() {
         let val = &params.0[key];
         let (input_type, width, value_str) = match val {
             Value::Number(n) => ("number", "width:110px", n.to_string()),
@@ -790,8 +996,8 @@ fn build_active_params_html(params: &ActivationParams) -> String {
         };
         rows.push_str(&format!(
             r#"<div class="param-row">
-            <span class="param-label">{key}</span>
-            <input class="param-input" type="{input_type}" value="{value_str}"
+            <label class="param-label" for="scenario-param-{index}">{key}</label>
+            <input class="param-input" id="scenario-param-{index}" type="{input_type}" value="{value_str}"
                    data-param-name="{key}" data-param-type="{input_type}"
                    style="{width}">
           </div>"#
@@ -804,35 +1010,35 @@ fn build_active_params_html(params: &ActivationParams) -> String {
 
 pub fn page_html(scenario: &str, body: &str, control_url: &str, sim_url: &str) -> String {
     let nav = logo_nav_html("/", sim_url, control_url);
+    let footer_credit = footer_credit_html();
     format!(
         r##"<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>infraware.dev</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
+  <title>Rotelle &mdash; Status</title>
+  <link rel="icon" type="image/png" href="/rotelle-mark.png">
   <style>{SHARED_CSS}</style>
 </head>
 <body>
   <div class="container">
     {nav}
-    <div class="card">
+    <main class="card">
       <div class="card-header">
         <span class="card-label">Service Status</span>
-        <div class="status-pill">
+        <div class="status-pill" role="status">
           <div class="status-dot"></div>
           <span class="status-text">running</span>
         </div>
       </div>
       <div class="card-body">
+        <div class="scenario-label">Active scenario</div>
         <div class="scenario-name">{scenario}</div>
         {body}
       </div>
-      <div class="card-footer">
-        <span class="footer-text">infraware.dev</span>
-      </div>
-    </div>
+      <footer class="card-footer">{footer_credit}</footer>
+    </main>
   </div>
 </body>
 </html>"##
@@ -849,6 +1055,7 @@ pub fn control_html(
     sim_url: &str,
 ) -> String {
     let nav = logo_nav_html("/rotectl/control", sim_url, control_url);
+    let footer_credit = footer_credit_html();
 
     let sim_badge_class = format!("sim-status sim-status-{sim_status}");
     let sim_badge_text = match sim_status {
@@ -858,7 +1065,7 @@ pub fn control_html(
     };
 
     let mut combobox_options = String::new();
-    for meta in scenarios {
+    for (index, meta) in scenarios.iter().enumerate() {
         let is_selected = meta.name == active_scenario;
         let selected_class = if is_selected { " is-selected" } else { "" };
         let active_dot = if is_selected {
@@ -867,7 +1074,7 @@ pub fn control_html(
             ""
         };
         combobox_options.push_str(&format!(
-            r#"<div class="combobox-option{selected_class}" data-value="{name}">
+            r#"<div class="combobox-option{selected_class}" id="scenario-option-{index}" role="option" aria-selected="{is_selected}" data-value="{name}">
               <div class="combobox-option-name">{active_dot}{name}</div>
               <div class="combobox-option-desc">{desc}</div>
             </div>"#,
@@ -892,7 +1099,7 @@ pub fn control_html(
             </div>
             <div class="form-footer">
               <button type="submit" class="submit-btn-outline" id="params-btn">Update Parameters</button>
-              <div class="feedback" id="params-feedback"></div>
+              <div class="feedback" id="params-feedback" role="status" aria-live="polite"></div>
             </div>
           </form>
         </div>"#
@@ -906,14 +1113,14 @@ pub fn control_html(
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>infraware.dev &middot; rotelle &mdash; Control</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
+  <title>Rotelle &mdash; Control</title>
+  <link rel="icon" type="image/png" href="/rotelle-mark.png">
   <style>{SHARED_CSS}{CONTROL_CSS}</style>
 </head>
 <body>
   <div class="container">
     {nav}
-    <div class="card">
+    <main class="card">
       <div class="card-header">
         <span class="card-label">Scenario Control</span>
       </div>
@@ -924,16 +1131,18 @@ pub fn control_html(
             <div class="scenario-name">{active_scenario}</div>
             <div class="scenario-description">{active_description}</div>
           </div>
-          <div id="sim-badge" class="{sim_badge_class}">
+          <div id="sim-badge" class="{sim_badge_class}" role="status" aria-live="polite">
             <div class="sim-dot"></div>
             <span class="sim-text">{sim_badge_text}</span>
           </div>
         </div>
         <div class="section-divider">
-          <div class="switch-label">Switch Scenario</div>
+          <div class="switch-label" id="scenario-picker-label">Switch Scenario</div>
           <form id="activate-form">
             <div class="combobox" id="combobox">
-              <button type="button" class="combobox-trigger" id="combobox-trigger">
+              <button type="button" class="combobox-trigger" id="combobox-trigger"
+                      aria-haspopup="listbox" aria-expanded="false" aria-controls="combobox-list"
+                      aria-labelledby="scenario-picker-label combobox-current">
                 <span id="combobox-current">{active_scenario}</span>
                 <svg class="combobox-chevron" viewBox="0 0 12 8" fill="none" xmlns="http://www.w3.org/2000/svg" width="12" height="8">
                   <path d="M1 1l5 5 5-5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
@@ -946,30 +1155,91 @@ pub fn control_html(
                     <path d="M10 10l3 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
                   </svg>
                   <input type="search" id="scenario-search" class="combobox-search"
-                         placeholder="Search scenarios&hellip;" autocomplete="off" spellcheck="false">
+                         placeholder="Search scenarios&hellip;" autocomplete="off" spellcheck="false"
+                         role="combobox" aria-autocomplete="list" aria-expanded="true"
+                         aria-controls="combobox-list" aria-label="Search scenarios">
                 </div>
-                <div class="combobox-list" id="combobox-list">
+                <div class="combobox-list" id="combobox-list" role="listbox" aria-label="Scenarios">
                   {combobox_options}
-                  <div id="combobox-no-results" class="combobox-no-results" hidden>No scenarios match.</div>
+                  <div id="combobox-no-results" class="combobox-no-results" role="status" hidden>No scenarios match.</div>
                 </div>
               </div>
               <input type="hidden" id="scenario-hidden" value="{active_scenario}">
             </div>
             <div class="form-footer">
               <button type="submit" class="submit-btn" id="activate-btn">Activate Scenario</button>
-              <div class="feedback" id="activate-feedback"></div>
+              <div class="feedback" id="activate-feedback" role="status" aria-live="polite"></div>
             </div>
           </form>
         </div>
         {params_section}
       </div>
-      <div class="card-footer">
-        <span class="footer-text">rotelle &middot; infraware.dev</span>
-      </div>
-    </div>
+      <footer class="card-footer">{footer_credit}</footer>
+    </main>
   </div>
   <script>{CONTROL_JS}</script>
 </body>
 </html>"##
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn status_page_uses_rotelle_identity() {
+        let html = page_html(
+            "none, idle",
+            "<p>Ready for a scenario.</p>",
+            "/rotectl/control",
+            "/",
+        );
+
+        assert!(html.contains("<title>Rotelle &mdash; Status</title>"));
+        assert!(html.contains("href=\"/rotelle-mark.png\""));
+        assert!(html.contains("src=\"/rotelle-mark.png\""));
+        assert!(html.contains("<a class=\"brand-name\" href=\"/\">rotelle</a>"));
+        assert!(html.contains(
+            "open-source chaos lab by <a href=\"https://infraware.dev\">infraware.dev</a>"
+        ));
+        assert!(html.contains("class=\"nav-link nav-active\" aria-current=\"page\">Status"));
+        assert!(!html.contains("class=\"logo-img\""));
+    }
+
+    #[test]
+    fn control_page_exposes_accessible_scenario_picker() {
+        let active_params = ActivationParams::from_json(serde_json::json!({
+            "interval_secs": 10
+        }));
+        let scenarios = vec![
+            ScenarioMeta {
+                name: "none, idle",
+                description: "No failure active.",
+            },
+            ScenarioMeta {
+                name: "slow-response",
+                description: "Responds after a delay.",
+            },
+        ];
+        let html = control_html(
+            "slow-response",
+            "Responds after a delay.",
+            &active_params,
+            &scenarios,
+            "ok",
+            "/rotectl/control",
+            "/",
+        );
+
+        assert!(html.contains("<title>Rotelle &mdash; Control</title>"));
+        assert!(html.contains("aria-haspopup=\"listbox\" aria-expanded=\"false\""));
+        assert!(html.contains("role=\"listbox\" aria-label=\"Scenarios\""));
+        assert!(
+            html.contains("role=\"option\" aria-selected=\"true\" data-value=\"slow-response\"")
+        );
+        assert!(html.contains("data-param-name=\"interval_secs\""));
+        assert!(html.contains("role=\"status\" aria-live=\"polite\""));
+        assert!(html.contains("class=\"nav-link nav-active\" aria-current=\"page\">Control"));
+    }
 }

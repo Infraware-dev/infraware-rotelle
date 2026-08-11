@@ -19,6 +19,20 @@ GET {{rotelle_service_host}}/
 HTTP 200
 [Asserts]
 body contains "none, idle"
+body contains "<title>Rotelle &mdash; Status</title>"
+body contains "src=\"/rotelle-mark.png\""
+body contains "open-source chaos lab by <a href=\"https://infraware.dev\">infraware.dev</a>"
+
+GET {{rotelle_service_host}}/rotectl/control
+HTTP 200
+[Asserts]
+body contains "<title>Rotelle &mdash; Control</title>"
+body contains "role=\"listbox\""
+
+GET {{rotelle_service_host}}/rotelle-mark.png
+HTTP 200
+[Asserts]
+header "content-type" == "image/png"
 
 # ── set a scenario ────────────────────────────────────────────────────────────
 

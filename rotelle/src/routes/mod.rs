@@ -10,6 +10,7 @@ fn base() -> Route {
     Route::new()
         .at("/logo.png", get(logo::logo))
         .at("/favicon.png", get(logo::favicon))
+        .at("/rotelle-mark.png", get(logo::rotelle_mark))
 }
 
 fn with_sim(r: Route) -> Route {
