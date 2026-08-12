@@ -8,5 +8,6 @@ pub mod keep_alive_timeout;
 pub mod missing_env_var;
 pub mod oom_kill;
 pub mod service_unreachable;
+pub mod slow_response;
 
 pub use crate::core::{ActivationParams, IndexEffect, Scenario};

@@ -1,0 +1,6 @@
+dependencies:
+- name: gigapipe
+  repository: https://metrico.github.io/gigapipe-helm/
+  version: 0.3.0
+digest: sha256:2efe1e0bcf85cb6ed98399d73711986e3c780abe7066e8876769116dc2d45134
+generated: "2026-07-22T13:20:35.311733477+01:00"

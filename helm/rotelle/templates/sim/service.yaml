@@ -1,0 +1,18 @@
+{{- if .Values.sim.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Values.sim.fullnameOverride }}
+  namespace: {{ .Values.sim.namespace }}
+  labels:
+    app: {{ .Values.sim.fullnameOverride }}
+    {{- include "rotelle.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.sim.service.type }}
+  selector:
+    app: {{ .Values.sim.fullnameOverride }}
+  ports:
+    - name: http
+      port: {{ .Values.sim.service.port }}
+      targetPort: http
+{{- end }}

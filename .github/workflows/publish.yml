@@ -4,9 +4,10 @@ on:
   push:
     tags:
       - 'v[0-9]*'
+  workflow_dispatch:
 
 concurrency:
-  group: publish-${{ github.ref }}
+  group: publish
   cancel-in-progress: true
 
 env:
@@ -29,6 +30,13 @@ jobs:
       contents: read
       packages: write
     steps:
+      - name: Validate tag
+        run: |
+          if [[ ! "${{ github.ref_name }}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Tag '${{ github.ref_name }}' does not match vX.Y.Z"
+            exit 1
+          fi
+
       - uses: actions/checkout@v4
 
       - uses: dtolnay/rust-toolchain@stable
@@ -95,11 +103,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Package Helm charts
+        run: |
+          tar -czf rotelle-helm-chart.tgz -C helm rotelle
+          tar -czf observability-gp-mini-helm-chart.tgz -C helm observability-gp-mini
+
       - name: Create GitHub Release
         run: |
           gh release create ${{ github.ref_name }} \
             --title "${{ github.ref_name }}" \
             --generate-notes \
-            --latest
+            --latest \
+            rotelle-helm-chart.tgz \
+            observability-gp-mini-helm-chart.tgz
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

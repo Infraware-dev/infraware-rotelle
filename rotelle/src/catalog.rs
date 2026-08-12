@@ -12,6 +12,7 @@ use crate::scenario::keep_alive_timeout::KeepAliveTimeoutScenario;
 use crate::scenario::missing_env_var::MissingEnvVarScenario;
 use crate::scenario::oom_kill::OomKillScenario;
 use crate::scenario::service_unreachable::ServiceUnreachableScenario;
+use crate::scenario::slow_response::SlowResponseScenario;
 
 /// All built-in failure scenarios.
 ///
@@ -33,5 +34,6 @@ pub fn all(shutdown_armed: Arc<AtomicU64>) -> Vec<Factory> {
                 &shutdown_armed,
             )))
         }),
+        Box::new(|| Arc::new(SlowResponseScenario::new())),
     ]
 }

@@ -13,6 +13,7 @@ Each scenario is a named failure condition activated via `POST /rotectl/cmd`.
 | `missing-env-var` | Pod exits on startup if a required env var is absent → CrashLoopBackOff |
 | `service-unreachable` | Every `GET /` hangs — simulates a Service with no matching pods |
 | `ingress-conflict` | Every 3rd request returns 502 — simulates a routing conflict |
+| `slow-response` | Every `GET /` is delayed — simulates a degraded pod that exceeds readiness probe timeouts |
 | `config-stale` | Serves a stale config version — models a pod ignoring a ConfigMap update |
 | `graceful-shutdown-failure` | Ignores SIGTERM while still serving → dropped connections on rollout |
 
@@ -45,11 +46,13 @@ The process calls `exit(1)` on every 5th `GET /`. Kubernetes detects the non-zer
 **Parameters:** none
 
 **Activate:**
+
 ```json
 { "cmd": "set", "scenario": "crash-loop" }
 ```
 
 **`/rotectl/status` extras:**
+
 ```json
 { "access_count": 3, "crash_every": 5 }
 ```
@@ -76,11 +79,13 @@ A background task wakes every `loop_time_secs` seconds and allocates `loop_amoun
 | `loop_amount_mb` | usize | 10 | MB allocated per iteration |
 
 **Activate** (OOMKill a 64 Mi pod in ~30–40 s):
+
 ```json
 { "cmd": "set", "scenario": "oom-kill", "loop_time_secs": 10, "loop_amount_mb": 15 }
 ```
 
 **`/rotectl/status` extras:**
+
 ```json
 { "loop_time_secs": 10, "loop_amount_mb": 15 }
 ```
@@ -111,16 +116,19 @@ Activation stores the required variable name. The crash triggers on `GET /` when
 | `var_value` | String | `""` (empty) | Leave empty to trigger the crash; set to any value to simulate the var being present |
 
 **Activate** (triggers crash loop):
+
 ```json
 { "cmd": "set", "scenario": "missing-env-var", "required_var": "DATABASE_URL" }
 ```
 
 **Fix** (set var_value to stop crashing — send via the control pod while the sim is up):
+
 ```json
 { "cmd": "set", "scenario": "missing-env-var", "required_var": "DATABASE_URL", "var_value": "postgres://..." }
 ```
 
 **`/rotectl/status` extras:**
+
 ```json
 { "required_var": "DATABASE_URL", "var_present": false }
 ```
@@ -144,6 +152,7 @@ Every `GET /` hangs the connection indefinitely (the async task sleeps; the thre
 **Parameters:** none
 
 **Activate:**
+
 ```json
 { "cmd": "set", "scenario": "service-unreachable" }
 ```
@@ -165,11 +174,13 @@ Returns HTTP 502 on every 3rd `GET /`; other requests return 200. The counter re
 **Parameters:** none
 
 **Activate:**
+
 ```json
 { "cmd": "set", "scenario": "ingress-conflict" }
 ```
 
 **`/rotectl/status` extras:**
+
 ```json
 { "request_count": 4, "fail_every": 3 }
 ```
@@ -180,85 +191,44 @@ Returns HTTP 502 on every 3rd `GET /`; other requests return 200. The counter re
 
 ---
 
+## slow-response
+
+**Source:** `rotelle/src/scenario/slow_response.rs`
+
+**What it simulates:** A pod that is alive but degraded — responding so slowly it exceeds readiness probe timeouts. This models a slow upstream dependency (slow DB query, blocked I/O) that causes the pod to be marked `NotReady` and removed from Service endpoints without ever crashing.
+
+Every `GET /` sleeps for `delay_ms` milliseconds before responding 200 (the async task sleeps; the thread pool stays unblocked). The control plane (`/rotectl/*`) remains instant so the scenario can be reset while requests are slow.
+
+**Parameters:**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `delay_ms` | u64 | 2000 | Milliseconds to sleep before each `GET /` response |
+
+**Activate:**
+
+```json
+{ "cmd": "set", "scenario": "slow-response", "delay_ms": 2000 }
+```
+
+**`/rotectl/status` extras:**
+
+```json
+{ "delay_ms": 2000 }
+```
+
+**Diagnosis value:** Helps operators distinguish a crashed pod from a degraded one. The pod is running and logs are clean — only response-time metrics and readiness probe events reveal the issue. Good for training on `kubectl describe pod` readiness-probe failure events.
+
+**Note:** The default manifest's readiness probe targets `/rotectl/health` (which stays fast by design), not `GET /`. To observe an actual readiness-probe `Unhealthy` event, point a probe at `/` with a `timeoutSeconds` lower than `delay_ms`.
+
+**Hurl test:** `tests/hurl-scenario/slow-response.hurl`
+
+---
+
 ## config-stale
 
 **Source:** `rotelle/src/scenario/config_stale.rs`
 
 **What it simulates:** A pod serving stale configuration after a ConfigMap update.
 
-A ConfigMap consumed as environment variables is snapshotted into the pod at start and never refreshes when the ConfigMap changes — the pod keeps serving the old value until it is restarted. Activation captures a `version` string; every `GET /` renders that version, unchanged, until the scenario is re-activated with a new `version` (the manual intervention a real fix requires).
-
-Unlike every other scenario, the failure is silent and data-level: no crash, no error, no latency — just subtly wrong data.
-
-**Parameters:**
-
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `version` | String | `v1` | The config version the pod serves on every request |
-
-**Activate:**
-```json
-{ "cmd": "set", "scenario": "config-stale", "version": "v2" }
-```
-
-**`/rotectl/status` extras:**
-```json
-{ "served_version": "v2" }
-```
-
-**Persistence:** The version is saved to `/data/state.json` and resumes automatically after a pod restart — modelling a pod that keeps serving stale config even across restarts. An explicit `reset` returns the service to idle.
-
-**Diagnosis value:** The only silent, data-level scenario. There is nothing in logs, events, or pod status to find. Diagnosis requires comparing the value the pod actually serves against the current ConfigMap — e.g. `kubectl exec <pod> -- printenv VERSION` versus `kubectl get configmap <name> -o jsonpath='{.data.VERSION}'`. Trains operators to spot config drift between running pods and the declared ConfigMap.
-
-**Hurl test:** `tests/hurl-scenario/config-stale.hurl`
-
----
-
-## graceful-shutdown-failure
-
-**Source:** `rotelle/src/scenario/graceful_shutdown_failure.rs`
-
-**What it simulates:** A pod that ignores SIGTERM during a rolling update.
-
-Kubernetes sends SIGTERM and waits `terminationGracePeriodSeconds`. While this scenario is active the process swallows the signal for `ignore_secs`, keeps answering `GET /` with 200, and only then exits — so in-flight requests are severed when the kubelet's SIGKILL lands. When the scenario is inactive, rotelle exits promptly on SIGTERM.
-
-**Parameters:**
-
-| Field | Type | Default | Description |
-|---|---|---|---|
-| `ignore_secs` | u64 | `30` | How long SIGTERM is ignored while the pod keeps serving |
-
-**Activate:**
-```json
-{ "cmd": "set", "scenario": "graceful-shutdown-failure", "ignore_secs": 90 }
-```
-
-**`/rotectl/status` extras:**
-```json
-{ "ignore_secs": 90, "armed": true, "requests_served": 12 }
-```
-
-**Triggering it:** the failure only appears on a pod lifecycle event.
-
-```bash
-kubectl -n rotelle get pod -w &
-kubectl -n rotelle delete pod -l app=rotelle    # or: kubectl exec <pod> -- kill -TERM 1
-```
-
-With `terminationGracePeriodSeconds: 60` in the manifests, `ignore_secs=30` shows a delete blocked for 30 s that then exits cleanly; `ignore_secs=90` shows the pod SIGKILLed with requests in flight. Keep traffic flowing during the delete (`while true; do curl -s -o /dev/null -w '%{http_code}\n' <url>/; done`) to see the resets.
-
-Locally, Ctrl-C sends SIGINT, which is unhandled — use `kill -TERM <pid>` instead.
-
-**Persistence:** `ignore_secs` is saved to `/data/state.json` and re-arms on restart, so the next rollout fails the same way until an explicit `reset`.
-
-**Diagnosis value:** Trains operators to spot a missing `preStop` hook and improper shutdown handling. Symptoms appear only during pod lifecycle events — a blocking `kubectl delete pod` waits out the entire window, pods sit in `Terminating` far longer than expected while still `Ready` and serving traffic, and clients see connection resets when the kubelet's SIGKILL lands. Every probe stays green throughout, so nothing in pod status or events points at the cause.
-
-Note that `kubectl rollout status` may report success while the doomed pod is still `Terminating`: recent Kubernetes versions account for terminating pods separately (`ReplicaSet.status.terminatingReplicas`) and no longer hold the rollout open for them. `kubectl get pod -w` is the reliable signal.
-
-**Hurl test:** `tests/hurl-scenario/graceful-shutdown-failure.hurl`
-
----
-
-## Proposed
-
-No additional scenarios are currently planned. Contributions welcome — see [CONTRIBUTING.md](../CONTRIBUTING.md).
+A ConfigMap consumed as environment variables is snapshotted into the pod at start and never refreshes when the ConfigMap changes — the pod keeps serving
