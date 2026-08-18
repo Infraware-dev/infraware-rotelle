@@ -20,6 +20,11 @@ spec:
       labels:
         app: rotelle
     spec:
+      # Longer than graceful-shutdown-failure's default ignore_secs (30) so both
+      # training paths are observable: ignore_secs < 60 exits on its own after a
+      # blocked rollout, ignore_secs > 60 gets SIGKILLed with requests in flight.
+      # Deliberately no preStop hook — its absence is what the scenario teaches.
+      terminationGracePeriodSeconds: 60
       containers:
         - name: rotelle
           image: ghcr.io/infraware-dev/infraware-rotelle:v0.1.0

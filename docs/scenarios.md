@@ -14,6 +14,8 @@ Each scenario is a named failure condition activated via `POST /rotectl/cmd`.
 | `service-unreachable` | Every `GET /` hangs — simulates a Service with no matching pods |
 | `ingress-conflict` | Every 3rd request returns 502 — simulates a routing conflict |
 | `slow-response` | Every `GET /` is delayed — simulates a degraded pod that exceeds readiness probe timeouts |
+| `config-stale` | Serves a stale config version — models a pod ignoring a ConfigMap update |
+| `graceful-shutdown-failure` | Ignores SIGTERM while still serving → dropped connections on rollout |
 
 ---
 
@@ -44,11 +46,13 @@ The process calls `exit(1)` on every 5th `GET /`. Kubernetes detects the non-zer
 **Parameters:** none
 
 **Activate:**
+
 ```json
 { "cmd": "set", "scenario": "crash-loop" }
 ```
 
 **`/rotectl/status` extras:**
+
 ```json
 { "access_count": 3, "crash_every": 5 }
 ```
@@ -75,11 +79,13 @@ A background task wakes every `loop_time_secs` seconds and allocates `loop_amoun
 | `loop_amount_mb` | usize | 10 | MB allocated per iteration |
 
 **Activate** (OOMKill a 64 Mi pod in ~30–40 s):
+
 ```json
 { "cmd": "set", "scenario": "oom-kill", "loop_time_secs": 10, "loop_amount_mb": 15 }
 ```
 
 **`/rotectl/status` extras:**
+
 ```json
 { "loop_time_secs": 10, "loop_amount_mb": 15 }
 ```
@@ -110,16 +116,19 @@ Activation stores the required variable name. The crash triggers on `GET /` when
 | `var_value` | String | `""` (empty) | Leave empty to trigger the crash; set to any value to simulate the var being present |
 
 **Activate** (triggers crash loop):
+
 ```json
 { "cmd": "set", "scenario": "missing-env-var", "required_var": "DATABASE_URL" }
 ```
 
 **Fix** (set var_value to stop crashing — send via the control pod while the sim is up):
+
 ```json
 { "cmd": "set", "scenario": "missing-env-var", "required_var": "DATABASE_URL", "var_value": "postgres://..." }
 ```
 
 **`/rotectl/status` extras:**
+
 ```json
 { "required_var": "DATABASE_URL", "var_present": false }
 ```
@@ -143,6 +152,7 @@ Every `GET /` hangs the connection indefinitely (the async task sleeps; the thre
 **Parameters:** none
 
 **Activate:**
+
 ```json
 { "cmd": "set", "scenario": "service-unreachable" }
 ```
@@ -164,11 +174,13 @@ Returns HTTP 502 on every 3rd `GET /`; other requests return 200. The counter re
 **Parameters:** none
 
 **Activate:**
+
 ```json
 { "cmd": "set", "scenario": "ingress-conflict" }
 ```
 
 **`/rotectl/status` extras:**
+
 ```json
 { "request_count": 4, "fail_every": 3 }
 ```
@@ -194,11 +206,13 @@ Every `GET /` sleeps for `delay_ms` milliseconds before responding 200 (the asyn
 | `delay_ms` | u64 | 2000 | Milliseconds to sleep before each `GET /` response |
 
 **Activate:**
+
 ```json
 { "cmd": "set", "scenario": "slow-response", "delay_ms": 2000 }
 ```
 
 **`/rotectl/status` extras:**
+
 ```json
 { "delay_ms": 2000 }
 ```
@@ -211,6 +225,10 @@ Every `GET /` sleeps for `delay_ms` milliseconds before responding 200 (the asyn
 
 ---
 
-## Proposed
+## config-stale
 
-No additional scenarios are currently planned. Contributions welcome — see [CONTRIBUTING.md](../CONTRIBUTING.md).
+**Source:** `rotelle/src/scenario/config_stale.rs`
+
+**What it simulates:** A pod serving stale configuration after a ConfigMap update.
+
+A ConfigMap consumed as environment variables is snapshotted into the pod at start and never refreshes when the ConfigMap changes — the pod keeps serving
