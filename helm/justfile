@@ -14,13 +14,18 @@ install-obs:
 uninstall-obs:
     helm uninstall {{obs_release}} -n {{obs_namespace}}
 
-# Install rotelle (sim + control pod), default GHCR image. Creates its own rotelle/rotelle-system namespaces.
+# Discovers the most recent tag via `git describe --tags --abbrev=0`.
+# Install rotelle (sim + control pod) from the latest git-tagged release image on GHCR.
 install-rotelle:
+    #!/bin/sh -e
+    LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.2.0") && \
     helm upgrade --install \
       --create-namespace \
       --rollback-on-failure \
       -n {{rotelle_namespace}} \
-       {{rotelle_release}} ./rotelle
+      {{rotelle_release}} ./rotelle \
+      --set image.tag=$LATEST_TAG \
+      --set image.repository=ghcr.io/infraware-dev/infraware-rotelle
 
 # Install rotelle against a locally-built image — for validating the chart, not the rebuild/redeploy inner loop (use `just deploy` at the repo root for that)
 install-rotelle-dev:

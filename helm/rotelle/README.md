@@ -20,7 +20,7 @@ cluster-scoped permissions of its own).
 ## Install
 
 Default install — pulls the published image from GHCR
-(`ghcr.io/infraware-dev/infraware-rotelle:v0.1.3`, overridable via
+(`ghcr.io/infraware-dev/infraware-rotelle:v0.2.1`, overridable via
 `image.tag`):
 
 ```sh

@@ -23,62 +23,63 @@ git checkout main
 git pull upstream main
 cargo test --manifest-path rotelle/Cargo.toml   # must pass
 just test-hurl                                   # must pass (server running in terminal 1)
+./scripts/check-version-invariants.sh            # must pass
 ```
 
-**2. Update the version in `rotelle/Cargo.toml`**
+> `check-version-invariants.sh` can also be added to CI or a git pre-push hook
+> to catch out-of-sync versions before they reach `main`.
 
-```toml
-[package]
-version = "0.2.0"   # ← bump this
-```
+**2. Run `scripts/release-prep.sh`**
 
-**3. Update `CHANGELOG.md`**
-
-Add an entry for the new version. Follow the existing format:
-
-```markdown
-## [0.2.0] - YYYY-MM-DD
-
-### Added
-- feat: ...
-
-### Fixed
-- fix: ...
-```
-
-**4. Commit and push the version bump**
+This script bumps the version across *all* version-gated files and
+commits the result in one atomic change — no chance of forgetting one
+of the five locations:
 
 ```sh
-git add rotelle/Cargo.toml CHANGELOG.md
-git commit -m "chore: release v0.2.0"
-git push upstream main
+./scripts/release-prep.sh 0.2.1
 ```
 
-> This pushes directly to `main` and requires maintainer/admin access to the repository. GitHub's branch protection is configured to allow admin bypass for exactly this use case. If you cannot push directly, open a short PR titled `chore: release v0.2.0` and merge it first.
+It updates:
+- `rotelle/Cargo.toml` (package version)
+- `rotelle/Cargo.lock` (lock file entry)
+- `helm/rotelle/Chart.yaml` (`version` + `appVersion`)
+- `helm/rotelle/values.yaml` (default `image.tag`)
+- `helm/rotelle/README.md` (doc reference to the default image)
+- `CHANGELOG.md` (inserts a new `[0.2.1]` entry with today's date)
 
-**5. Tag the release**
+The commit message is `chore: release v0.2.1` — inspect the diff before
+pushing.  Verify invariants hold:
+
+```sh
+./scripts/check-version-invariants.sh
+```
+
+> This pushes directly to `main` and requires maintainer/admin access to the repository. GitHub's branch protection is configured to allow admin bypass for exactly this use case. If you cannot push directly, open a short PR titled `chore: release v0.2.1` and merge it first.
+
+**3. Tag the release**
 
 Pushing the tag triggers the publish workflow (multi-arch build → GHCR push → GitHub Release creation).
 
 ```sh
-git tag v0.2.0
-git push upstream v0.2.0
+git push origin main
+git tag v0.2.1
+git push origin v0.2.1
 ```
 
-**6. Watch the publish workflow**
+**4. Watch the publish workflow**
 
 Go to [Actions → Publish to GHCR](https://github.com/infraware-dev/infraware-rotelle/actions/workflows/publish.yml) and confirm the `build`, `merge`, and `github-release` jobs complete.
 
 The following are created automatically:
-- `ghcr.io/infraware-dev/infraware-rotelle:v0.2.0`
+- `ghcr.io/infraware-dev/infraware-rotelle:v0.2.1`
 - `ghcr.io/infraware-dev/infraware-rotelle:latest`
 - A GitHub Release at the Releases page
 
-**7. Verify the published image**
+**5. Verify the published image**
 
 ```sh
-docker pull ghcr.io/infraware-dev/infraware-rotelle:v0.2.0
-docker run --rm -p 8080:8080 ghcr.io/infraware-dev/infraware-rotelle:v0.2.0 &
+docker pull ghcr.io/infraware-dev/infraware-rotelle:v0.2.1
+docker run --rm -p 8080:8080 ghcr.io/infraware-dev/infraware-rotelle:v0.2.1 &
 curl http://localhost:8080/rotectl/status
 ```
 
