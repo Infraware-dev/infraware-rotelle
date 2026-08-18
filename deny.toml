@@ -9,6 +9,10 @@ allow = [
 [bans]
 multiple-versions = "deny"
 deny = []
+skip = [
+    # poem-derive uses syn 2 while the rest of the ecosystem (serde, tokio, etc.) uses syn 3
+    { name = "syn" },
+]
 
 [advisories]
 version = 2
