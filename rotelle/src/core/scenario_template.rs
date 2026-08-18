@@ -1,5 +1,7 @@
 use serde_json::Value;
 use std::collections::HashMap;
+use std::sync::Arc;
+use tokio::sync::Semaphore;
 
 // ── Activation parameters ─────────────────────────────────────────────────────
 
@@ -136,10 +138,20 @@ pub enum IndexEffect {
     Hang,
     /// Return an HTTP response with a specific status code and HTML body.
     RespondWithStatus(u16, String),
+    RespondThenClose(String),
     /// Sleep for the given number of milliseconds, then return HTTP 200 with this HTML body.
     /// Simulates a degraded-but-alive pod whose slow responses exceed readiness probe timeouts.
     /// The index route handler sleeps the async task; the thread pool stays unblocked.
     RespondAfterDelay(u64, String),
+    /// Acquire a permit from `gate`, hold it for `hold_ms`, then return HTTP 200.
+    /// Only as many requests as the gate has permits proceed at once — the rest
+    /// queue, so response latency grows with offered concurrency. Simulates a pod
+    /// whose request handlers are all parked on a slow downstream dependency.
+    /// The index route handler awaits the permit; the thread pool stays unblocked.
+    QueueBehindGate {
+        gate: Arc<Semaphore>,
+        hold_ms: u64,
+    },
 }
 
 // ── Shared styles ─────────────────────────────────────────────────────────────

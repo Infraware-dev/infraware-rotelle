@@ -14,6 +14,7 @@ Each scenario is a named failure condition activated via `POST /rotectl/cmd`.
 | `service-unreachable` | Every `GET /` hangs — simulates a Service with no matching pods |
 | `ingress-conflict` | Every 3rd request returns 502 — simulates a routing conflict |
 | `slow-response` | Every `GET /` is delayed — simulates a degraded pod that exceeds readiness probe timeouts |
+| `thread-exhaustion` | Only N requests served at once — simulates handlers blocked on a slow dependency; latency grows with load |
 
 ---
 
@@ -208,6 +209,44 @@ Every `GET /` sleeps for `delay_ms` milliseconds before responding 200 (the asyn
 **Note:** The default manifest's readiness probe targets `/rotectl/health` (which stays fast by design), not `GET /`. To observe an actual readiness-probe `Unhealthy` event, point a probe at `/` with a `timeoutSeconds` lower than `delay_ms`.
 
 **Hurl test:** `tests/hurl-scenario/slow-response.hurl`
+
+---
+
+## thread-exhaustion
+
+**Source:** `rotelle/src/scenario/thread_exhaustion.rs`
+
+**What it simulates:** A pod whose request handlers are all blocked on a slow internal dependency (slow DB query, sluggish upstream API). This is concurrency-based, not time-based: the pod is fast when idle and degrades as load rises, which is what distinguishes real thread-pool exhaustion from a uniformly slow endpoint.
+
+Every `GET /` must claim one of `max_concurrent` slots before responding, and holds that slot for `hold_ms` milliseconds. Requests beyond that queue, so response time grows with offered concurrency — the Nth concurrent request waits roughly `(N / max_concurrent) * hold_ms`. The async task awaits the slot; the thread pool stays unblocked and the control plane (`/rotectl/*`) remains instant, so the scenario can be reset while requests are backed up. `reset` closes the gate and any request still queued gets an immediate `503` rather than waiting its turn.
+
+**Parameters:**
+
+| Field | Type | Default | Description |
+|---|---|---|---|
+| `hold_ms` | u64 | 500 | Milliseconds each request holds its slot before responding |
+| `max_concurrent` | usize | 3 | Requests served simultaneously; the rest queue. Clamped to a minimum of 1 |
+
+**Activate:**
+```json
+{ "cmd": "set", "scenario": "thread-exhaustion", "hold_ms": 500, "max_concurrent": 3 }
+```
+
+**`/rotectl/status` extras:**
+```json
+{ "hold_ms": 500, "max_concurrent": 3, "slots_in_use": 3, "total_requests": 47 }
+```
+
+**Diagnosis value:** Trains operators to tell a *slow* dependency from a *dead* one. Under sustained saturation the pod stays `1/1 Running` with 0 restarts, `Ready=True`, still listed in the Service endpoints, and `kubectl describe pod` reports `Events: <none>` — both probes pass because a probe is one request at a time, and one request is always fast. Only load testing reveals the failure, which makes this scenario resistant to a `kubectl describe pod`-only workflow. The signals that do exist are `slots_in_use` pegged at `max_concurrent` in `/rotectl/status`, and `slots_free=0` on each request in the pod logs.
+
+**Observing the queue:**
+```sh
+seq 20 | xargs -P 20 -I{} curl -s -o /dev/null -w '%{time_total}\n' \
+  http://localhost:8080/ | sort -n
+```
+With the defaults this prints a staircase — three requests per `hold_ms` window (`0.50, 0.50, 0.50, 1.00, 1.00, 1.00, 1.50, …`) instead of the flat cluster `slow-response` produces, where all 20 report roughly the same duration.
+
+**Hurl test:** `tests/hurl-scenario/thread-exhaustion.hurl` — covers activation, status extras, the single-request hold and reset. Hurl runs sequentially, so the queueing behaviour itself is verified with the parallel `curl` above.
 
 ---
 

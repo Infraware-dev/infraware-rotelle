@@ -6,7 +6,7 @@ use poem::{
     http::StatusCode,
     web::{Data, Html},
 };
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 #[handler]
 pub async fn index(state: Data<&AppState>) -> Response {
@@ -35,8 +35,42 @@ pub async fn index(state: Data<&AppState>) -> Response {
             let status = StatusCode::from_u16(code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
             (status, Html(html)).into_response()
         }
+        IndexEffect::RespondThenClose(body) => {
+            let mut response =
+                Html(page_html(name, &body, &state.control_url, &state.sim_url)).into_response();
+            response.headers_mut().insert(
+                poem::http::header::CONNECTION,
+                poem::http::HeaderValue::from_static("close"),
+            );
+            response
+        }
         IndexEffect::RespondAfterDelay(delay_ms, body) => {
             tokio::time::sleep(Duration::from_millis(delay_ms)).await;
+            Html(page_html(name, &body, &state.control_url, &state.sim_url)).into_response()
+        }
+        IndexEffect::QueueBehindGate { gate, hold_ms } => {
+            let queued_at = Instant::now();
+            // Waiting here rather than in on_index_request keeps the scenario mutex
+            // free, so /rotectl/* stays instant while requests pile up behind the gate.
+            let permit = match gate.acquire().await {
+                Ok(permit) => permit,
+                // deactivate() closes the gate — drain the backlog immediately instead
+                // of serving a scenario that is no longer active.
+                Err(_) => {
+                    return (
+                        StatusCode::SERVICE_UNAVAILABLE,
+                        Html("<p>Scenario reset while this request was queued.</p>"),
+                    )
+                        .into_response();
+                }
+            };
+            let waited_ms = queued_at.elapsed().as_millis();
+            tokio::time::sleep(Duration::from_millis(hold_ms)).await;
+            drop(permit);
+            let body = format!(
+                "<p>Queued <strong>{waited_ms} ms</strong> for a free slot, \
+                 then held it for <strong>{hold_ms} ms</strong>.</p>"
+            );
             Html(page_html(name, &body, &state.control_url, &state.sim_url)).into_response()
         }
     }

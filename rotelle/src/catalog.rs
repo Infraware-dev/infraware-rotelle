@@ -5,10 +5,12 @@ use crate::scenario::check::Check;
 use crate::scenario::crash_loop::CrashLoopScenario;
 use crate::scenario::idle::Idle;
 use crate::scenario::ingress_conflict::IngressConflictScenario;
+use crate::scenario::keep_alive_timeout::KeepAliveTimeoutScenario;
 use crate::scenario::missing_env_var::MissingEnvVarScenario;
 use crate::scenario::oom_kill::OomKillScenario;
 use crate::scenario::service_unreachable::ServiceUnreachableScenario;
 use crate::scenario::slow_response::SlowResponseScenario;
+use crate::scenario::thread_exhaustion::ThreadExhaustionScenario;
 
 /// All built-in failure scenarios.
 ///
@@ -22,7 +24,9 @@ pub fn all() -> Vec<Factory> {
         Box::new(|| Arc::new(OomKillScenario::new())),
         Box::new(|| Arc::new(MissingEnvVarScenario::new())),
         Box::new(|| Arc::new(ServiceUnreachableScenario::new())),
+        Box::new(|| Arc::new(KeepAliveTimeoutScenario::new())),
         Box::new(|| Arc::new(IngressConflictScenario::new())),
         Box::new(|| Arc::new(SlowResponseScenario::new())),
+        Box::new(|| Arc::new(ThreadExhaustionScenario::new())),
     ]
 }
