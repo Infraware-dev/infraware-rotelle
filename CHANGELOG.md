@@ -7,6 +7,12 @@ Versions follow [Semantic Versioning](https://semver.org/).
 
 <!-- Maintained manually. Add a new entry as part of the release checklist in RELEASING.md. -->
 
+## [0.2.1] - 2026-08-18
+
+### Fixed
+
+- fix: publish workflow now pins chart image.tag to the release tag, preventing stale defaults from leaking into released chart assets
+
 ## [0.2.0] - 2026-08-11
 
 ### Changed
